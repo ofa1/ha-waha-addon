@@ -1,0 +1,42 @@
+name: "WAHA WhatsApp API"
+version: "0.1.0"
+slug: "waha_whatsapp_api"
+description: "Self-hosted WAHA WhatsApp HTTP API for HAOS; useful for dedicated WhatsApp Channel posting automation."
+url: "https://github.com/YOUR_GITHUB_USERNAME/ha-waha-addon"
+arch:
+  - aarch64
+startup: services
+boot: auto
+init: false
+stage: experimental
+panel_icon: mdi:whatsapp
+panel_title: WAHA
+webui: "http://[HOST]:[PORT:3000]"
+ingress: true
+ingress_port: 3000
+ingress_entry: "/"
+ports:
+  3000/tcp: 3000
+ports_description:
+  3000/tcp: "WAHA Dashboard and HTTP API"
+map:
+  - type: addon_config
+    read_only: false
+options:
+  api_key: "CHANGE_ME_generate_with_openssl_rand_hex_32"
+  dashboard_enabled: true
+  dashboard_username: "admin"
+  dashboard_password: "CHANGE_ME_generate_with_openssl_rand_hex_32"
+  default_engine: "GOWS"
+  local_store_base_dir: "/data/.sessions"
+  log_level: "info"
+  timezone: "America/Toronto"
+schema:
+  api_key: "str"
+  dashboard_enabled: "bool"
+  dashboard_username: "str"
+  dashboard_password: "password"
+  default_engine: "list(GOWS|NOWEB|WEBJS)"
+  local_store_base_dir: "str"
+  log_level: "list(error|warn|info|debug|trace)"
+  timezone: "str"
