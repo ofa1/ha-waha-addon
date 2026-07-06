@@ -23,10 +23,13 @@ map:
   - type: addon_config
     read_only: false
 options:
-  api_key: "CHANGE_ME_generate_with_openssl_rand_hex_32"
+  # Leave blank to auto-generate on first start and persist under /data/.secrets.env.
+  # Set explicitly only if you want to rotate or manage credentials yourself.
+  api_key: ""
   dashboard_enabled: true
   dashboard_username: "admin"
-  dashboard_password: "CHANGE_ME_generate_with_openssl_rand_hex_32"
+  # Leave blank to auto-generate on first start and persist under /data/.secrets.env.
+  dashboard_password: ""
   default_engine: "GOWS"
   local_store_base_dir: "/data/.sessions"
   log_level: "info"

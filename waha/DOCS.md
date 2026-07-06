@@ -7,12 +7,13 @@ WAHA is powerful: anyone with access to the API/dashboard can send WhatsApp mess
 Minimum recommendations:
 
 1. Use a dedicated WhatsApp number for automation.
-2. Use strong, unique values for:
-   - `api_key`
-   - `dashboard_password`
-3. Do **not** expose port `3000` directly to the public internet.
-4. If exposing via Cloudflare Tunnel, put Cloudflare Access in front of the route.
-5. Use the API key on all automation calls:
+2. Let the add-on auto-generate its local secrets, or set strong unique values yourself:
+   - `api_key` protects the HTTP API via `X-Api-Key`.
+   - `dashboard_password` protects the WAHA dashboard.
+3. The auto-generated values live in `/data/.secrets.env`; treat that file, first-start logs, and HA backups as sensitive.
+4. Do **not** expose port `3000` directly to the public internet.
+5. If exposing via Cloudflare Tunnel, put Cloudflare Access in front of the route.
+6. Use the API key on all automation calls:
 
    ```http
    X-Api-Key: YOUR_API_KEY

@@ -17,7 +17,7 @@ This repo is intended for a small, dedicated WhatsApp automation workload such a
    ```
 
 4. Install **WAHA WhatsApp API**.
-5. Open the add-on configuration and replace all `CHANGE_ME_*` secrets before starting.
+5. Open the add-on configuration. You may leave `api_key` and `dashboard_password` blank; the add-on auto-generates and persists them on first start. If you want to manage secrets yourself, set strong values manually.
 
 ## What this add-on does
 

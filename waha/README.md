@@ -2,20 +2,22 @@
 
 Runs [WAHA](https://waha.devlike.pro/) inside Home Assistant OS as a managed add-on.
 
-## Before starting
+## Credentials
 
-Open the add-on **Configuration** tab and replace:
+There are no external vendor API keys required for WAHA itself.
 
-- `api_key`
-- `dashboard_password`
+The add-on needs two local secrets only:
 
-Generate strong values with:
+- `api_key` — protects WAHA's HTTP API (`X-Api-Key`).
+- `dashboard_password` — protects the WAHA web dashboard.
+
+Leave both fields blank to auto-generate 256-bit random values on first start. The generated values are saved under `/data/.secrets.env`, which persists across add-on restarts and is included in HA backups. On the first start only, the add-on prints the generated values to the add-on log so you can copy them into your Worker or password manager. Treat that log as sensitive.
+
+If you prefer to manage or rotate credentials yourself, set either field explicitly in the add-on configuration. Generate strong values with:
 
 ```bash
 openssl rand -hex 32
 ```
-
-The add-on refuses to start while either value still starts with `CHANGE_ME`.
 
 ## Recommended settings
 
