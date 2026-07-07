@@ -8,16 +8,19 @@ This repo is intended for a small, dedicated WhatsApp automation workload such a
 
 ## Add this repository to Home Assistant
 
-1. Fork or copy this repo to your GitHub account.
-2. In Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**.
-3. Paste your repo URL, for example:
+[![Open your Home Assistant instance and show the add add-on repository dialog with this repository pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fofa1%2Fha-waha-addon)
+
+Or add it manually:
+
+1. In Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**.
+2. Paste this repository URL:
 
    ```text
    https://github.com/ofa1/ha-waha-addon
    ```
 
-4. Install **WAHA WhatsApp API**.
-5. Open the add-on configuration. You may leave `api_key` and `dashboard_password` blank; the add-on auto-generates and persists them on first start. If you want to manage secrets yourself, set strong values manually.
+3. Install **WAHA WhatsApp API**.
+4. Open the add-on configuration. You may leave `api_key` and `dashboard_password` blank; the add-on auto-generates and persists them on first start. If you want to manage secrets yourself, set strong values manually.
 
 ## What this add-on does
 
