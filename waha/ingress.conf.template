@@ -74,11 +74,24 @@ http {
             # WAHA's dashboard can emit absolute paths. Rewrite common HTML/CSS/JS
             # references so they remain under the HA ingress prefix.
             sub_filter_once off;
-            sub_filter_types text/html text/css application/javascript application/json;
+            sub_filter_types text/html text/css application/javascript text/javascript application/json;
             sub_filter 'href="/' 'href="$ingress_path/';
             sub_filter 'src="/' 'src="$ingress_path/';
             sub_filter 'action="/' 'action="$ingress_path/';
             sub_filter 'url(/' 'url($ingress_path/';
+
+            # WAHA dashboard is a Nuxt app built with an absolute /dashboard
+            # baseURL. Under Home Assistant ingress, JS-generated asset/API
+            # URLs must also stay below the random ingress prefix.
+            sub_filter '"/dashboard' '"$ingress_path/dashboard';
+            sub_filter "'/dashboard" "'$ingress_path/dashboard";
+            sub_filter '`/dashboard' '`$ingress_path/dashboard';
+            sub_filter '"/api' '"$ingress_path/api';
+            sub_filter "'/api" "'$ingress_path/api";
+            sub_filter '`/api' '`$ingress_path/api';
+            sub_filter 'baseURL:"/"' 'baseURL:"$ingress_path/"';
+            sub_filter 'baseURL:"/dashboard/"' 'baseURL:"$ingress_path/dashboard/"';
+
             sub_filter 'fetch("/' 'fetch("$ingress_path/';
             sub_filter "fetch('/" "fetch('$ingress_path/";
             sub_filter 'axios.get("/' 'axios.get("$ingress_path/';

@@ -2,6 +2,10 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.1.6 - 2026-07-07
+
+- Rewrite WAHA dashboard's Nuxt-generated absolute `/dashboard`, `/api`, and `baseURL` references under the Home Assistant ingress prefix to fix blank pages caused by frontend assets/API calls escaping ingress.
+
 ## 0.1.5 - 2026-07-07
 
 - Redirect the Home Assistant ingress root (`/`) to WAHA's dashboard path (`/dashboard/`) to avoid a blank ingress panel when WAHA serves no UI at the root path.
