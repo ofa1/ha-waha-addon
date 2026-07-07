@@ -13,7 +13,7 @@ This repo is intended for a small, dedicated WhatsApp automation workload such a
 3. Paste your repo URL, for example:
 
    ```text
-   https://github.com/YOUR_GITHUB_USERNAME/ha-waha-addon
+   https://github.com/ofa1/ha-waha-addon
    ```
 
 4. Install **WAHA WhatsApp API**.
