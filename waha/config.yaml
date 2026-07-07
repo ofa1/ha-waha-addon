@@ -1,5 +1,5 @@
 name: "WAHA WhatsApp API"
-version: "0.1.2"
+version: "0.1.3"
 slug: "waha_whatsapp_api"
 description: "Self-hosted WAHA WhatsApp HTTP API for HAOS; useful for dedicated WhatsApp Channel posting automation."
 url: "https://github.com/ofa1/ha-waha-addon"
@@ -12,13 +12,15 @@ stage: experimental
 panel_icon: mdi:whatsapp
 panel_title: WAHA
 webui: "http://[HOST]:[PORT:3000]"
-ingress: true
+# WAHA is a single-page app with absolute API/static paths. Use a direct web UI
+# URL instead of Home Assistant ingress to avoid path-rewrite issues.
+ingress: false
 ingress_port: 3000
 ingress_entry: "/"
 ports:
-  3000/tcp: null
+  3000/tcp: 3001
 ports_description:
-  3000/tcp: "WAHA Dashboard and HTTP API (optional; leave disabled if you only use Home Assistant ingress)"
+  3000/tcp: "WAHA Dashboard and HTTP API host port. Change this if 3001 is already in use."
 map:
   - type: addon_config
     read_only: false
