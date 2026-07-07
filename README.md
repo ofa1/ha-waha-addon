@@ -27,6 +27,6 @@ Or add it manually:
 - Uses the browserless `devlikeapro/waha:noweb-arm` image, suitable for Raspberry Pi / HAOS on ARM.
 - Defaults to the **GOWS** engine, with **NOWEB** as the recommended fallback if channel posting is engine-sensitive.
 - Persists WAHA sessions under `/data/.sessions`, so QR pairing survives add-on restarts and Home Assistant backups.
-- Exposes WAHA on port `3000` and via Home Assistant ingress.
+- Exposes WAHA via Home Assistant ingress; direct host port `3000` is optional and disabled by default to avoid conflicts.
 
 See [`waha/DOCS.md`](waha/DOCS.md) for setup, security, Cloudflare Tunnel notes, and channel-post testing.
