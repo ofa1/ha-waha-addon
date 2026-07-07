@@ -11,7 +11,7 @@ Minimum recommendations:
    - `api_key` protects the HTTP API via `X-Api-Key`.
    - `dashboard_password` protects the WAHA dashboard.
 3. The auto-generated values live in `/data/.secrets.env`; treat that file, first-start logs, and HA backups as sensitive.
-4. Do **not** expose WAHA directly to the public internet. The add-on uses host port `3001` by default for local access because WAHA does not reliably run behind Home Assistant ingress path rewriting.
+4. Do **not** expose WAHA directly to the public internet. Browser access uses Home Assistant ingress by default through an internal proxy; leave the optional direct host port disabled unless you need a local fallback.
 5. If exposing via Cloudflare Tunnel, put Cloudflare Access in front of the route.
 6. Use the API key on all automation calls:
 
@@ -33,12 +33,18 @@ For a single paired number/session on a Raspberry Pi:
 
 After pairing the dedicated WhatsApp number and making it a Channel admin, test a real Channel post before building the RSS automation.
 
-Replace values. The add-on maps WAHA's internal port `3000` to host port `3001` by default; if you changed the Network port in Home Assistant, use your chosen host port here:
+Replace values. If you enable the optional direct host port in the Home Assistant add-on Network settings, use that local URL. If you are calling from another add-on/container on the HA network, use the add-on hostname and WAHA's internal port:
+
+```bash
+WAHA_URL="http://a6137ac8-waha-whatsapp-api:3000"
+WAHA_API_KEY="your_api_key"
+CHANNEL_ID="123456789012345678@newsletter"
+```
+
+If you mapped `3000/tcp` to a host port manually, for example `3001`, use:
 
 ```bash
 WAHA_URL="http://homeassistant.local:3001"
-WAHA_API_KEY="your_api_key"
-CHANNEL_ID="123456789012345678@newsletter"
 ```
 
 Send text:

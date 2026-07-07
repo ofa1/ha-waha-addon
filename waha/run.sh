@@ -96,7 +96,48 @@ export TZ="$CONFIG_TZ"
 
 mkdir -p "$WAHA_LOCAL_STORE_BASE_DIR"
 
+WAHA_BASIC_AUTH="Basic $(node -e "process.stdout.write(Buffer.from(process.argv[1] + ':' + process.argv[2]).toString('base64'))" "$CONFIG_DASHBOARD_USERNAME" "$WAHA_DASHBOARD_PASSWORD")"
+export WAHA_BASIC_AUTH
+
+# Render the ingress proxy config without printing secrets. The proxy is only
+# reachable from Home Assistant's ingress gateway and injects WAHA credentials
+# internally, so users do not see a second Basic Auth prompt inside HA.
+node <<'NODE'
+const fs = require('fs');
+const templatePath = '/etc/nginx/templates/waha-ingress.conf.template';
+const outputPath = '/tmp/waha-ingress.conf';
+const template = fs.readFileSync(templatePath, 'utf8');
+const rendered = template
+  .replaceAll('__WAHA_BASIC_AUTH__', process.env.WAHA_BASIC_AUTH || '')
+  .replaceAll('__WAHA_API_KEY__', process.env.WAHA_API_KEY || '');
+fs.writeFileSync(outputPath, rendered, { mode: 0o600 });
+NODE
+
 echo "Starting WAHA with engine=${WHATSAPP_DEFAULT_ENGINE}, store=${WAHA_LOCAL_STORE_BASE_DIR}, dashboard_enabled=${WAHA_DASHBOARD_ENABLED}"
 echo "WAHA API key and dashboard password are set. Values are intentionally not printed."
+echo "Starting Home Assistant ingress proxy on port 8099."
 
-exec /entrypoint.sh
+/entrypoint.sh &
+WAHA_PID=$!
+
+nginx -t -c /tmp/waha-ingress.conf
+nginx -c /tmp/waha-ingress.conf &
+NGINX_PID=$!
+
+term_handler() {
+  echo "Stopping WAHA and ingress proxy..."
+  kill "$WAHA_PID" "$NGINX_PID" 2>/dev/null || true
+}
+trap term_handler TERM INT
+
+while :; do
+  if ! kill -0 "$WAHA_PID" 2>/dev/null; then
+    wait "$WAHA_PID"
+    exit $?
+  fi
+  if ! kill -0 "$NGINX_PID" 2>/dev/null; then
+    wait "$NGINX_PID"
+    exit $?
+  fi
+  sleep 2
+done

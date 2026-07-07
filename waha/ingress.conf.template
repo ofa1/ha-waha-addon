@@ -1,0 +1,83 @@
+worker_processes 1;
+pid /tmp/nginx.pid;
+error_log /dev/stdout info;
+daemon off;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    access_log /dev/stdout;
+    sendfile on;
+    keepalive_timeout 65;
+    proxy_read_timeout 1200;
+    proxy_send_timeout 1200;
+    client_max_body_size 50M;
+
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+
+    # Home Assistant sends the randomly generated ingress prefix in this header,
+    # for example: /api/hassio_ingress/<token>
+    map $http_x_ingress_path $ingress_path {
+        default $http_x_ingress_path;
+        '' '';
+    }
+
+    upstream waha_backend {
+        server 127.0.0.1:3000;
+    }
+
+    server {
+        listen 8099 default_server;
+        listen [::]:8099 default_server;
+
+        # HA Supervisor ingress gateway. Do not expose this proxy directly.
+        allow 172.30.32.2;
+        deny all;
+
+        server_name _;
+        root /dev/null;
+
+        proxy_http_version 1.1;
+        proxy_buffering off;
+
+        location / {
+            proxy_pass http://waha_backend;
+            proxy_redirect ~^(/.*)$ $ingress_path$1;
+
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Ingress-Path $ingress_path;
+            proxy_set_header X-NginX-Proxy true;
+            proxy_set_header Authorization "__WAHA_BASIC_AUTH__";
+            proxy_set_header X-Api-Key "__WAHA_API_KEY__";
+            proxy_set_header Accept-Encoding "";
+
+            # WAHA's dashboard can emit absolute paths. Rewrite common HTML/CSS/JS
+            # references so they remain under the HA ingress prefix.
+            sub_filter_once off;
+            sub_filter_types text/html text/css application/javascript application/json;
+            sub_filter 'href="/' 'href="$ingress_path/';
+            sub_filter 'src="/' 'src="$ingress_path/';
+            sub_filter 'action="/' 'action="$ingress_path/';
+            sub_filter 'url(/' 'url($ingress_path/';
+            sub_filter 'fetch("/' 'fetch("$ingress_path/';
+            sub_filter "fetch('/" "fetch('$ingress_path/";
+            sub_filter 'axios.get("/' 'axios.get("$ingress_path/';
+            sub_filter 'axios.post("/' 'axios.post("$ingress_path/';
+            sub_filter 'axios.put("/' 'axios.put("$ingress_path/';
+            sub_filter 'axios.delete("/' 'axios.delete("$ingress_path/';
+        }
+    }
+}
