@@ -1,5 +1,5 @@
 name: "WAHA WhatsApp API"
-version: "0.1.6"
+version: "0.1.7"
 slug: "waha_whatsapp_api"
 description: "Self-hosted WAHA WhatsApp HTTP API for HAOS; useful for dedicated WhatsApp Channel posting automation."
 url: "https://github.com/ofa1/ha-waha-addon"

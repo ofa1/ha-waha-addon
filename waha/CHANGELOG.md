@@ -2,6 +2,10 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.1.7 - 2026-07-07
+
+- Disable Nginx absolute redirects in the ingress proxy so redirects remain relative to the Home Assistant ingress host instead of pointing browsers at the add-on's internal Docker address.
+
 ## 0.1.6 - 2026-07-07
 
 - Rewrite WAHA dashboard's Nuxt-generated absolute `/dashboard`, `/api`, and `baseURL` references under the Home Assistant ingress prefix to fix blank pages caused by frontend assets/API calls escaping ingress.
