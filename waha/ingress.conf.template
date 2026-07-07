@@ -47,6 +47,13 @@ http {
         proxy_http_version 1.1;
         proxy_buffering off;
 
+        # The add-on panel opens ingress at `/`. WAHA serves the dashboard
+        # under `/dashboard`, so redirect the ingress root there.
+        location = / {
+            return 302 $ingress_path/dashboard/;
+        }
+
+        # Forward static dashboard assets, API, swagger, and any other WAHA path.
         location / {
             proxy_pass http://waha_backend;
             proxy_redirect ~^(/.*)$ $ingress_path$1;
