@@ -56,6 +56,131 @@ http {
             return 302 $ingress_path/dashboard/;
         }
 
+        # Simple no-secret browser helper for manually testing a WhatsApp Channel
+        # post through the ingress proxy. The browser never sees WAHA_API_KEY;
+        # nginx injects it only on proxied /api requests below.
+        location = /channel-test {
+            return 302 $ingress_path/channel-test/;
+        }
+
+        location = /channel-test/ {
+            default_type text/html;
+            return 200 '<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAHA Channel Test</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { max-width: 760px; margin: 32px auto; padding: 0 16px; line-height: 1.45; }
+    label { display: block; margin: 16px 0 6px; font-weight: 650; }
+    input, textarea, button { box-sizing: border-box; width: 100%; font: inherit; padding: 10px 12px; border-radius: 8px; border: 1px solid #9996; }
+    textarea { min-height: 110px; }
+    button { margin-top: 12px; cursor: pointer; border: 0; background: #128c7e; color: white; font-weight: 700; }
+    button.secondary { background: #445; }
+    button:disabled { opacity: .65; cursor: wait; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #0001; padding: 12px; border-radius: 8px; }
+    .ok { color: #148a3b; font-weight: 700; }
+    .err { color: #c0392b; font-weight: 700; }
+    .muted { opacity: .75; }
+  </style>
+</head>
+<body>
+  <h1>WAHA Channel Test</h1>
+  <p class="muted">Resolve a WhatsApp Channel invite link and send one manual test post. The WAHA API key stays inside the Home Assistant add-on ingress proxy.</p>
+
+  <label for="invite">Channel link or invite code</label>
+  <input id="invite" value="https://whatsapp.com/channel/0029Vb8Bpdt35fLvioamvy0j">
+
+  <label for="session">Session</label>
+  <input id="session" value="default">
+
+  <label for="text">Test post text</label>
+  <textarea id="text">Test post from WAHA/Home Assistant integration.</textarea>
+
+  <button id="resolve">1. Resolve Channel</button>
+  <button id="send" class="secondary" disabled>2. Send Test Post</button>
+
+  <h2>Status</h2>
+  <pre id="output">Ready.</pre>
+
+<script>
+(function () {
+  var ingressPath = "$ingress_path";
+  var resolvedChannelId = "";
+  var out = document.getElementById("output");
+  function log(message, isError) {
+    out.textContent = message;
+    out.className = isError ? "err" : "";
+  }
+  function inviteCode(value) {
+    value = String(value || "").trim();
+    var marker = "/channel/";
+    var index = value.indexOf(marker);
+    if (index >= 0) value = value.slice(index + marker.length);
+    value = value.replace(/^https?:\/\/[^/]+\//, "");
+    value = value.split(/[?#]/)[0].replace(/^\/+|\/+$/g, "");
+    return value;
+  }
+  async function request(path, options) {
+    var response = await fetch(ingressPath + path, options || {});
+    var body = await response.text();
+    var parsed = body;
+    try { parsed = JSON.parse(body); } catch (_) {}
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status + " " + response.statusText + "\n" + (typeof parsed === "string" ? parsed : JSON.stringify(parsed, null, 2)));
+    }
+    return parsed;
+  }
+  document.getElementById("resolve").addEventListener("click", async function () {
+    var button = this;
+    button.disabled = true;
+    document.getElementById("send").disabled = true;
+    resolvedChannelId = "";
+    try {
+      var session = encodeURIComponent(document.getElementById("session").value.trim() || "default");
+      var code = encodeURIComponent(inviteCode(document.getElementById("invite").value));
+      if (!code) throw new Error("Paste a channel link or invite code first.");
+      log("Resolving channel...");
+      var channel = await request("/api/" + session + "/channels/" + code);
+      resolvedChannelId = channel.id || "";
+      if (!resolvedChannelId) throw new Error("WAHA response did not include channel.id:\n" + JSON.stringify(channel, null, 2));
+      document.getElementById("send").disabled = false;
+      log("Resolved channel:\n" + JSON.stringify(channel, null, 2));
+    } catch (error) {
+      log(String(error && error.message || error), true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById("send").addEventListener("click", async function () {
+    var button = this;
+    button.disabled = true;
+    try {
+      if (!resolvedChannelId) throw new Error("Resolve the channel first.");
+      var session = document.getElementById("session").value.trim() || "default";
+      var text = document.getElementById("text").value;
+      if (!text.trim()) throw new Error("Enter test post text first.");
+      log("Sending test post to " + resolvedChannelId + "...");
+      var result = await request("/api/sendText", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session: session, chatId: resolvedChannelId, text: text })
+      });
+      log("Sent. Visually confirm the post landed in WhatsApp Channel.\n\n" + JSON.stringify(result, null, 2));
+    } catch (error) {
+      log(String(error && error.message || error), true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>';
+        }
+
         # Forward static dashboard assets, API, swagger, and any other WAHA path.
         location / {
             proxy_pass http://waha_backend;

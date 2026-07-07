@@ -2,6 +2,10 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.1.8 - 2026-07-07
+
+- Add a simple Home Assistant ingress-only `/channel-test/` helper page that resolves a WhatsApp Channel invite link and sends one manual test post without exposing the WAHA API key to the browser.
+
 ## 0.1.7 - 2026-07-07
 
 - Disable Nginx absolute redirects in the ingress proxy so redirects remain relative to the Home Assistant ingress host instead of pointing browsers at the add-on's internal Docker address.
