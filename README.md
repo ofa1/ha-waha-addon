@@ -31,6 +31,13 @@ Or add it manually:
 
 See [`waha/DOCS.md`](waha/DOCS.md) for setup, Cloudflare Tunnel notes, and channel-post testing, and [`waha/SECURITY.md`](waha/SECURITY.md) for the threat model and residual risks.
 
+## Mirroring a Telegram channel
+
+[`waha/TELEGRAM-MIRROR.md`](waha/TELEGRAM-MIRROR.md) sets up one-way replication
+of a Telegram channel into a WhatsApp Channel — text, photos, videos and audio —
+using only Home Assistant automations and this add-on. Media never passes
+through Home Assistant: WAHA fetches it from Telegram directly.
+
 ## Development
 
 The Supervisor builds this add-on on the Home Assistant device itself, so a
@@ -47,6 +54,14 @@ the routing behaviour. Every assertion corresponds to a regression that has
 actually shipped; see [`waha/CHANGELOG.md`](waha/CHANGELOG.md). Requires
 `nginx` and `python3`. The same script runs in CI on every push and pull
 request touching `waha/`.
+
+The Telegram mirror's payload template is checked separately, by rendering the
+snippet straight out of `TELEGRAM-MIRROR.md` and asserting the result is valid
+JSON for every media type:
+
+```bash
+python3 ./waha/tests/test_mirror_templates.py   # needs jinja2
+```
 
 > Note: the add-on has `auto_update` enabled, so a push to `main` deploys
 > without waiting for CI. Turn it off in the add-on's Supervisor settings if you

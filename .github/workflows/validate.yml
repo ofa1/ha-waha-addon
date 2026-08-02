@@ -47,6 +47,14 @@ jobs:
       - name: Validate add-on
         run: ./waha/tests/validate.sh
 
+      # The Telegram-mirror payload template ships as a snippet users paste
+      # into secrets.yaml, so nothing at runtime validates it. A malformed
+      # caption there surfaces only as an opaque HTTP 422 from WAHA.
+      - name: Validate mirror templates
+        run: |
+          pip install --quiet jinja2
+          python3 waha/tests/test_mirror_templates.py
+
   lint:
     name: Add-on manifest
     runs-on: ubuntu-latest
