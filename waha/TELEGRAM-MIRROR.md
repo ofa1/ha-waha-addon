@@ -222,6 +222,17 @@ as its own update, so a 4-photo album becomes 4 WhatsApp posts.
 
 **Polls and service messages are skipped**, and logged at INFO.
 
+**The dedupe counter is bound to one channel.** `TG Mirror Last Message ID` is
+a high-water mark, and Telegram message IDs are sequential *per chat* starting
+at 1. If you ever point `TG Mirror Source Chat ID` at a different channel — or
+delete and recreate the same one — the new channel's IDs start well below the
+stored mark and **every post is silently suppressed**. Reset
+`TG Mirror Last Message ID` to `0` whenever you change the source channel.
+
+Leaving your personal chat authorised in the Telegram Bot integration is
+harmless: posts from any chat other than the configured source are rejected by
+the second condition, and never touch the counter.
+
 ### Rate limiting
 
 The automation is `mode: queued` with a 5-second delay after each post, capping
@@ -256,3 +267,23 @@ Check in this order:
    the add-on's `api_key`.
 5. **HTTP 422 mentioning the session** means the session name changed — WAHA
    regenerates it on re-pair. Update the `TG Mirror WAHA Session` helper.
+6. **Nothing happens at all, and the trace shows condition 3 failing** — the
+   dedupe counter is ahead of the channel's message IDs. This is what you see
+   after switching source channels. Set `TG Mirror Last Message ID` to `0`.
+7. **Nothing happens and there is no trace at all** — the bot is not receiving
+   channel posts. Confirm it is an *administrator* of the channel, not just a
+   member.
+
+## What has been verified, and what has not
+
+The routing logic was exercised end-to-end by firing synthetic
+`telegram_text` / `telegram_attachment` events at the automation and reading
+the traces: condition matching, the dedupe counter, the MIME dispatch
+(`image/jpeg` → `sendImage`), the synthesised filename for a photo
+(`tg-502.jpeg`), the no-MIME skip, and the 20 MB skip all behave as documented.
+The payload template is covered by `tests/test_mirror_templates.py`.
+
+Not verified, because they need live credentials: the two HTTP calls
+themselves — Telegram's `getFile` and WAHA's send endpoints. Your first real
+post is the test for those, which is why the troubleshooting list above starts
+with the automation trace.

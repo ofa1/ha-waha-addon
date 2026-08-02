@@ -30,15 +30,17 @@ DOC = pathlib.Path(__file__).resolve().parent.parent / "TELEGRAM-MIRROR.md"
 # repo, so they are mirrored here as documentation of the intended mapping —
 # audio/* must reach sendVoice, because that is the only audio type WhatsApp
 # Channels accept.
+# The `(mime | string)` parenthesisation is load-bearing: `mime | string.startswith(...)`
+# is a precedence error that fails at runtime, not at config load.
 ENDPOINT = (
-    "{% if mime.startswith('image/') %}sendImage"
-    "{% elif mime.startswith('video/') %}sendVideo"
-    "{% elif mime.startswith('audio/') %}sendVoice"
+    "{% if (mime | string).startswith('image/') %}sendImage"
+    "{% elif (mime | string).startswith('video/') %}sendVideo"
+    "{% elif (mime | string).startswith('audio/') %}sendVoice"
     "{% else %}sendFile{% endif %}"
 )
 FILENAME = (
-    "{{ file_name | default('', true) or "
-    "('tg-' ~ msg_id ~ '.' ~ (mime.split('/') | last)) }}"
+    "{{ file_name | default('', true) | string or "
+    "('tg-' ~ msg_id ~ '.' ~ ((mime | string).split('/') | last)) }}"
 )
 
 failures: list[str] = []
@@ -74,9 +76,16 @@ def main() -> int:
         ("audio/ogg", "sendVoice"),
         ("audio/mpeg", "sendVoice"),
         ("application/pdf", "sendFile"),
+        # Degenerate inputs. The automation stops before this template when the
+        # MIME type is absent entirely, but the routing must not raise if it is
+        # ever reached with something malformed.
+        ("", "sendFile"),
+        ("application/octet-stream", "sendFile"),
+        ("weird-no-slash", "sendFile"),
+        ("IMAGE/JPEG", "sendFile"),  # case-sensitive by design; Telegram sends lowercase
     ]:
         got = env.from_string(ENDPOINT).render(mime=mime).strip()
-        check(f"{mime} routes to {want}", got == want, f"got {got}")
+        check(f"{mime!r} routes to {want}", got == want, f"got {got}")
 
     got = env.from_string(FILENAME).render(file_name="", mime="image/jpeg", msg_id=42)
     check("photo filename synthesised", got == "tg-42.jpeg", f"got {got}")
@@ -84,6 +93,11 @@ def main() -> int:
         file_name="report.pdf", mime="application/pdf", msg_id=42
     )
     check("supplied filename preserved", got == "report.pdf", f"got {got}")
+    # A mime with no slash must still produce something usable rather than raising.
+    got = env.from_string(FILENAME).render(file_name="", mime="weird-no-slash", msg_id=7)
+    check("slashless mime still yields a filename", got == "tg-7.weird-no-slash", f"got {got}")
+    got = env.from_string(FILENAME).render(file_name="", mime="", msg_id=7)
+    check("empty mime still yields a filename", got == "tg-7.", f"got {got}")
 
     nasty = 'Quote " backslash \\ brace {"a": 1}\nnewline é\U0001f680'
     cases = [
