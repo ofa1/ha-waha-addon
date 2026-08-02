@@ -30,9 +30,16 @@ persisted to `/data/.secrets.env` with mode `0600`:
 - `api_key` — protects the HTTP API via `X-Api-Key`.
 - `dashboard_password` — protects the WAHA dashboard.
 
-A third, the Swagger password, is generated only when `swagger_enabled: true`.
+A third, the Swagger password, is generated unconditionally and passed to WAHA
+as `WHATSAPP_SWAGGER_PASSWORD`. This is not optional and not cosmetic: WAHA
+prints a "Generated credentials" banner for any credential it had to generate
+itself, and it does so **even when Swagger is disabled** — verified on a live
+instance running `WHATSAPP_SWAGGER_ENABLED=false`. Supplying a value is the
+only thing that suppresses it. That value is deliberately neither the dashboard
+password nor the API key, so if a future WAHA release echoes it anyway, the leak
+cannot escalate into WAHA API access.
 
-Both are printed to the add-on log **once**, on the start where they are
+The API key and dashboard password are printed to the add-on log **once**, on the start where they are
 generated, because that is the only practical way to retrieve them for an
 external caller such as a Cloudflare Worker. Treat that log entry, the
 `.secrets.env` file, and any Home Assistant backup as sensitive. Secrets are
@@ -122,3 +129,11 @@ unprompted. Bump the pin deliberately after reading WAHA's release notes.
       in front of it; the API key should not be the only public-facing control.
 - [ ] Rotate `api_key` and `dashboard_password` if the add-on log was ever
       shared, exported, or included in a support bundle.
+
+## History
+
+Add-on logs from before 0.2.1 contain a WAHA-generated Swagger password in
+plaintext, repeated on every start. It was only ever a Swagger credential —
+never the dashboard password or the API key — and Swagger is not exposed
+through the ingress proxy. No rotation is needed for it, but if you exported or
+shared those logs, be aware the string is in them.
