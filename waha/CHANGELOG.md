@@ -2,6 +2,53 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.2.0 - 2026-08-01
+
+Security and robustness pass. See the new `SECURITY.md` for the full threat
+model and the risks that remain.
+
+### Fixed
+
+- **API responses were being silently corrupted.** The `sub_filter` rules that
+  rewrite the WAHA dashboard's absolute paths were applied to every proxied
+  response, including `application/json` from `/api`. Any response body
+  containing `"/api` or `"/dashboard` — for example a WhatsApp message whose
+  text mentions one — was rewritten to include the ingress prefix. `/api` and
+  `/mcp` now have their own locations and are proxied verbatim; path rewriting
+  applies only to dashboard assets.
+- **A WAHA-generated Swagger password was printed to the add-on log on every
+  start.** WAHA prints a "Generated credentials" banner for any credential it
+  had to generate itself. Swagger is now off by default (`swagger_enabled`), so
+  there is nothing to generate. When enabled, the add-on supplies a dedicated
+  Swagger password from `/data/.secrets.env` — deliberately not the dashboard
+  password or the API key, so a leak there cannot escalate into API access.
+- Generated secrets are no longer re-printed to the log on later starts. Only
+  credentials created on that specific start are echoed.
+
+### Changed
+
+- Pin the base image to `devlikeapro/waha:noweb-arm-2026.7.2`. The floating
+  `noweb-arm` tag combined with `auto_update` allowed a rebuild to pull an
+  untested upstream release unprompted.
+- Validate the Nginx config before starting WAHA rather than after. Under
+  `set -e` a bad config aborts the script, which previously tore down an
+  already-connected WhatsApp session; it now fails before WhatsApp comes up.
+- Add a Supervisor watchdog (`tcp://[HOST]:8099`) so a dead ingress proxy is
+  restarted instead of leaving WhatsApp silently unreachable.
+- Set `panel_admin: true`. Note this governs sidebar visibility and is not a
+  reliable authorization boundary; see `SECURITY.md`.
+- Send `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` on
+  all responses, and a `Content-Security-Policy` on `/channel-test/`.
+  `X-Frame-Options` is intentionally not set — HA renders the panel in an iframe.
+- Set `server_tokens off` to stop advertising the Nginx version.
+- Consolidate the proxy headers at `server` level so the API and dashboard
+  locations cannot drift apart on credential injection.
+
+### Removed
+
+- The `addon_config` map. `run.sh` never read `/config`, so the read-write mount
+  was unnecessary surface.
+
 ## 0.1.11 - 2026-08-01
 
 - Populate the `/channel-test/` session field from `GET /api/sessions` instead of hardcoding `default`. WAHA generates session names (e.g. `session_01kwy9...`), so the hardcoded value produced a confusing `HTTP 422 Session "default" does not exist`. A single WORKING session is selected automatically; otherwise all sessions are offered as suggestions.

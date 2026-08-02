@@ -1,5 +1,5 @@
 name: "WAHA WhatsApp API"
-version: "0.1.11"
+version: "0.2.0"
 slug: "waha_whatsapp_api"
 description: "Self-hosted WAHA WhatsApp HTTP API for HAOS; useful for dedicated WhatsApp Channel posting automation."
 url: "https://github.com/ofa1/ha-waha-addon"
@@ -17,13 +17,18 @@ ingress: true
 ingress_port: 8099
 ingress_entry: "/"
 ingress_stream: true
+# Restrict the sidebar panel to Home Assistant admins. Anyone who can open the
+# panel reaches WAHA with admin credentials injected by the ingress proxy, so
+# this should not be relaxed. Note this governs the panel, not the raw ingress
+# URL; see SECURITY.md for the known Home Assistant limitation.
+panel_admin: true
+# Let the Supervisor restart the add-on if the ingress proxy stops answering,
+# rather than leaving WhatsApp unreachable until someone notices.
+watchdog: "tcp://[HOST]:8099"
 ports:
   3000/tcp: null
 ports_description:
   3000/tcp: "Optional direct WAHA Dashboard/API host port fallback. Leave disabled when using Home Assistant ingress."
-map:
-  - type: addon_config
-    read_only: false
 options:
   # Leave blank to auto-generate on first start and persist under /data/.secrets.env.
   # Set explicitly only if you want to rotate or manage credentials yourself.
@@ -32,6 +37,10 @@ options:
   dashboard_username: "admin"
   # Leave blank to auto-generate on first start and persist under /data/.secrets.env.
   dashboard_password: ""
+  # Off by default: WAHA generates a Swagger password and prints it to the
+  # add-on log when none is supplied. Nothing here needs Swagger, so the
+  # safest setting is to not run it at all.
+  swagger_enabled: false
   default_engine: "GOWS"
   local_store_base_dir: "/data/.sessions"
   log_level: "info"
@@ -41,6 +50,7 @@ schema:
   dashboard_enabled: "bool"
   dashboard_username: "str"
   dashboard_password: "password"
+  swagger_enabled: "bool"
   default_engine: "list(GOWS|NOWEB|WEBJS)"
   local_store_base_dir: "str"
   log_level: "list(error|warn|info|debug|trace)"

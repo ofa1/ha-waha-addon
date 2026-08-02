@@ -1,5 +1,8 @@
 # WAHA Home Assistant Add-on Docs
 
+> Full threat model, what is actually enforced, and the residual risks:
+> see [SECURITY.md](SECURITY.md).
+
 ## Security model
 
 WAHA is powerful: anyone with access to the API/dashboard can send WhatsApp messages as the paired number.
@@ -88,10 +91,10 @@ Do not expose WAHA publicly without Access or another strong auth layer. The WAH
 
 ## Pinning WAHA versions
 
-The Dockerfile currently uses:
+The Dockerfile pins an exact upstream tag:
 
 ```dockerfile
-FROM devlikeapro/waha:noweb-arm
+FROM devlikeapro/waha:noweb-arm-2026.7.2
 ```
 
-That keeps the image current, which is useful while WAHA channel support is evolving. Once you verify a version that posts to Channels reliably, pin the Dockerfile to a specific WAHA tag to avoid surprise breakage.
+It previously used the floating `noweb-arm` tag. With the add-on's `auto_update` enabled, that meant a Supervisor rebuild could pull an untested WAHA release without anyone initiating it. Bump this pin deliberately after reading WAHA's release notes; available tags are listed at <https://hub.docker.com/r/devlikeapro/waha/tags>.

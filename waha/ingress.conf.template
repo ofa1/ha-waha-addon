@@ -10,6 +10,7 @@ events {
 http {
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
+    server_tokens off;
     access_log /dev/stdout;
     sendfile on;
     keepalive_timeout 65;
@@ -50,6 +51,31 @@ http {
         proxy_http_version 1.1;
         proxy_buffering off;
 
+        # Do not let the browser sniff a response into a different type, and do
+        # not leak the random ingress token to third parties via Referer.
+        # X-Frame-Options / frame-ancestors are deliberately absent: Home
+        # Assistant renders the add-on panel inside an iframe.
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer" always;
+
+        # Proxy settings are declared once here and inherited by every location
+        # below, so the API and dashboard cannot drift apart on credentials.
+        proxy_redirect ~^(/.*)$ $ingress_path$1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Ingress-Path $ingress_path;
+        proxy_set_header X-NginX-Proxy true;
+        # Credentials are injected here and never sent to the browser. These
+        # also overwrite anything a client supplies under the same names.
+        proxy_set_header Authorization "__WAHA_BASIC_AUTH__";
+        proxy_set_header X-Api-Key "__WAHA_API_KEY__";
+        proxy_set_header Accept-Encoding "";
+
         # The add-on panel opens ingress at `/`. WAHA serves the dashboard
         # under `/dashboard`, so redirect the ingress root there.
         location = / {
@@ -74,25 +100,32 @@ http {
             # `channel-test.htmlindex.html`. try_files skips index handling.
             root /usr/share/waha-ingress;
             try_files /channel-test.html =404;
+
+            # A location with its own add_header drops the server-level ones,
+            # so repeat them here. 'unsafe-inline' is required because the page
+            # carries its own <style> and <script>; everything else is denied,
+            # and connect-src 'self' keeps its fetches on this origin.
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header Referrer-Policy "no-referrer" always;
+            add_header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none'" always;
         }
 
-        # Forward static dashboard assets, API, swagger, and any other WAHA path.
+        # WAHA's API and MCP endpoints are proxied verbatim. They must NOT go
+        # through the sub_filter block below: those rules rewrite any response
+        # text starting with "/api or "/dashboard, which would silently corrupt
+        # JSON payloads such as WhatsApp message bodies containing those
+        # strings. Only the dashboard's own HTML/CSS/JS needs path rewriting.
+        location ^~ /api {
+            proxy_pass http://waha_backend;
+        }
+
+        location ^~ /mcp {
+            proxy_pass http://waha_backend;
+        }
+
+        # Static dashboard assets and any other WAHA path.
         location / {
             proxy_pass http://waha_backend;
-            proxy_redirect ~^(/.*)$ $ingress_path$1;
-
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection $connection_upgrade;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header X-Forwarded-Host $host;
-            proxy_set_header X-Ingress-Path $ingress_path;
-            proxy_set_header X-NginX-Proxy true;
-            proxy_set_header Authorization "__WAHA_BASIC_AUTH__";
-            proxy_set_header X-Api-Key "__WAHA_API_KEY__";
-            proxy_set_header Accept-Encoding "";
 
             # WAHA's dashboard can emit absolute paths. Rewrite common HTML/CSS/JS
             # references so they remain under the HA ingress prefix.

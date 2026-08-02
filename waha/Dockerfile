@@ -1,7 +1,10 @@
 # Browserless ARM image for Raspberry Pi / HAOS.
-# Pin this after you confirm channel posting works in your environment, e.g.
-# FROM devlikeapro/waha:2026.x.y-noweb-arm if WAHA publishes that tag shape.
-FROM devlikeapro/waha:noweb-arm
+#
+# Pinned deliberately. The floating `noweb-arm` tag combined with the add-on's
+# auto_update means a Supervisor rebuild could pull an untested upstream WAHA
+# without anyone initiating it. Bump this tag on purpose after reading WAHA's
+# release notes; see https://hub.docker.com/r/devlikeapro/waha/tags
+FROM devlikeapro/waha:noweb-arm-2026.7.2
 USER root
 
 ARG BUILD_VERSION

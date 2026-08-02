@@ -21,6 +21,7 @@ generate_secret() {
 # Load generated credentials from previous starts, if any.
 GENERATED_WAHA_API_KEY=""
 GENERATED_WAHA_DASHBOARD_PASSWORD=""
+GENERATED_WAHA_SWAGGER_PASSWORD=""
 if [ -f "$SECRETS_FILE" ]; then
   # shellcheck disable=SC1090
   . "$SECRETS_FILE"
@@ -39,6 +40,7 @@ const opt = {
   CONFIG_DASHBOARD_ENABLED: options.dashboard_enabled ? 'true' : 'false',
   CONFIG_DASHBOARD_USERNAME: options.dashboard_username || 'admin',
   CONFIG_DASHBOARD_PASSWORD: options.dashboard_password || '',
+  CONFIG_SWAGGER_ENABLED: options.swagger_enabled ? 'true' : 'false',
   CONFIG_DEFAULT_ENGINE: options.default_engine || 'GOWS',
   CONFIG_LOCAL_STORE_BASE_DIR: options.local_store_base_dir || '/data/.sessions',
   CONFIG_LOG_LEVEL: options.log_level || 'info',
@@ -58,6 +60,7 @@ else
   if [ -z "${GENERATED_WAHA_API_KEY:-}" ]; then
     GENERATED_WAHA_API_KEY="$(generate_secret)"
     UPDATED_SECRETS=1
+    NEW_API_KEY=1
   fi
   WAHA_API_KEY="$GENERATED_WAHA_API_KEY"
 fi
@@ -68,8 +71,21 @@ else
   if [ -z "${GENERATED_WAHA_DASHBOARD_PASSWORD:-}" ]; then
     GENERATED_WAHA_DASHBOARD_PASSWORD="$(generate_secret)"
     UPDATED_SECRETS=1
+    NEW_DASHBOARD_PASSWORD=1
   fi
   WAHA_DASHBOARD_PASSWORD="$GENERATED_WAHA_DASHBOARD_PASSWORD"
+fi
+
+# WAHA prints any credential it had to generate itself into the add-on log on
+# every start, in a "Generated credentials" banner. That is how the Swagger
+# password ended up in plaintext in the Supervisor log. Two defences:
+#   1. Swagger is off unless explicitly enabled, so there is nothing to print.
+#   2. When it is enabled, supply a dedicated password so WAHA never generates
+#      one. It is deliberately NOT the dashboard password or the API key, so a
+#      leak here cannot escalate into WAHA API access.
+if [ "$CONFIG_SWAGGER_ENABLED" = "true" ] && [ -z "$GENERATED_WAHA_SWAGGER_PASSWORD" ]; then
+  GENERATED_WAHA_SWAGGER_PASSWORD="$(generate_secret)"
+  UPDATED_SECRETS=1
 fi
 
 if [ "${UPDATED_SECRETS:-0}" = "1" ]; then
@@ -77,18 +93,35 @@ if [ "${UPDATED_SECRETS:-0}" = "1" ]; then
   cat > "$SECRETS_FILE" <<EOF
 GENERATED_WAHA_API_KEY='$GENERATED_WAHA_API_KEY'
 GENERATED_WAHA_DASHBOARD_PASSWORD='$GENERATED_WAHA_DASHBOARD_PASSWORD'
+GENERATED_WAHA_SWAGGER_PASSWORD='$GENERATED_WAHA_SWAGGER_PASSWORD'
 EOF
   echo "Generated WAHA credentials and saved them to $SECRETS_FILE."
-  echo "Copy these now from the add-on log, then clear/download logs according to your HA security preference:"
-  echo "  Dashboard username: $CONFIG_DASHBOARD_USERNAME"
-  echo "  Dashboard password: $GENERATED_WAHA_DASHBOARD_PASSWORD"
-  echo "  API key: $GENERATED_WAHA_API_KEY"
+  # Print only what was generated on THIS start. Re-printing an unchanged
+  # secret (for example when Swagger is switched on later) would copy it into
+  # the add-on log all over again for no reason.
+  if [ "${NEW_DASHBOARD_PASSWORD:-0}" = "1" ] || [ "${NEW_API_KEY:-0}" = "1" ]; then
+    echo "Copy these now from the add-on log, then clear/download logs according to your HA security preference:"
+    if [ "${NEW_DASHBOARD_PASSWORD:-0}" = "1" ]; then
+      echo "  Dashboard username: $CONFIG_DASHBOARD_USERNAME"
+      echo "  Dashboard password: $GENERATED_WAHA_DASHBOARD_PASSWORD"
+    fi
+    if [ "${NEW_API_KEY:-0}" = "1" ]; then
+      echo "  API key: $GENERATED_WAHA_API_KEY"
+    fi
+  fi
+  # The Swagger password is never printed. It is recoverable from
+  # $SECRETS_FILE, and nothing outside the container needs it.
 fi
 
 export WAHA_API_KEY
 export WAHA_DASHBOARD_ENABLED="$CONFIG_DASHBOARD_ENABLED"
 export WAHA_DASHBOARD_USERNAME="$CONFIG_DASHBOARD_USERNAME"
 export WAHA_DASHBOARD_PASSWORD
+export WHATSAPP_SWAGGER_ENABLED="$CONFIG_SWAGGER_ENABLED"
+if [ "$CONFIG_SWAGGER_ENABLED" = "true" ]; then
+  export WHATSAPP_SWAGGER_USERNAME="$CONFIG_DASHBOARD_USERNAME"
+  export WHATSAPP_SWAGGER_PASSWORD="$GENERATED_WAHA_SWAGGER_PASSWORD"
+fi
 export WHATSAPP_DEFAULT_ENGINE="$CONFIG_DEFAULT_ENGINE"
 export WAHA_LOCAL_STORE_BASE_DIR="$CONFIG_LOCAL_STORE_BASE_DIR"
 export WAHA_LOG_LEVEL="$CONFIG_LOG_LEVEL"
@@ -113,14 +146,18 @@ const rendered = template
 fs.writeFileSync(outputPath, rendered, { mode: 0o600 });
 NODE
 
-echo "Starting WAHA with engine=${WHATSAPP_DEFAULT_ENGINE}, store=${WAHA_LOCAL_STORE_BASE_DIR}, dashboard_enabled=${WAHA_DASHBOARD_ENABLED}"
+echo "Starting WAHA with engine=${WHATSAPP_DEFAULT_ENGINE}, store=${WAHA_LOCAL_STORE_BASE_DIR}, dashboard_enabled=${WAHA_DASHBOARD_ENABLED}, swagger_enabled=${WHATSAPP_SWAGGER_ENABLED}"
 echo "WAHA API key and dashboard password are set. Values are intentionally not printed."
+
+# Validate the proxy config BEFORE bringing WhatsApp up. This script runs under
+# `set -e`, so a failing `nginx -t` aborts it; doing that first means a bad
+# config fails cleanly instead of tearing down an already-connected session.
+nginx -t -c /tmp/waha-ingress.conf
 echo "Starting Home Assistant ingress proxy on port 8099."
 
 /entrypoint.sh &
 WAHA_PID=$!
 
-nginx -t -c /tmp/waha-ingress.conf
 nginx -c /tmp/waha-ingress.conf &
 NGINX_PID=$!
 
