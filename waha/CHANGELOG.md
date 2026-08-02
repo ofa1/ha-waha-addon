@@ -2,6 +2,14 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.2.1 - 2026-08-01
+
+- Actually stop the Swagger password leak. 0.2.0 assumed that disabling Swagger
+  meant WAHA had no credential to generate, but a live check showed WAHA still
+  generating and printing one with `WHATSAPP_SWAGGER_ENABLED=false`. The
+  dedicated Swagger password is now supplied unconditionally, which is the only
+  thing that stops WAHA generating its own.
+
 ## 0.2.0 - 2026-08-01
 
 Security and robustness pass. See the new `SECURITY.md` for the full threat

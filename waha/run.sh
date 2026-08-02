@@ -77,13 +77,16 @@ else
 fi
 
 # WAHA prints any credential it had to generate itself into the add-on log on
-# every start, in a "Generated credentials" banner. That is how the Swagger
-# password ended up in plaintext in the Supervisor log. Two defences:
-#   1. Swagger is off unless explicitly enabled, so there is nothing to print.
-#   2. When it is enabled, supply a dedicated password so WAHA never generates
-#      one. It is deliberately NOT the dashboard password or the API key, so a
-#      leak here cannot escalate into WAHA API access.
-if [ "$CONFIG_SWAGGER_ENABLED" = "true" ] && [ -z "$GENERATED_WAHA_SWAGGER_PASSWORD" ]; then
+# every start, in a "Generated credentials" banner. That is how a Swagger
+# password ended up in plaintext in the Supervisor log.
+#
+# Setting WHATSAPP_SWAGGER_ENABLED=false does NOT suppress this — verified on
+# 0.2.0, where WAHA still generated and printed a Swagger password with Swagger
+# disabled. The only thing that stops it is supplying one, so generate a
+# dedicated value unconditionally. It is deliberately NOT the dashboard
+# password or the API key, so even if a future WAHA echoes it back, a leak
+# there cannot escalate into WAHA API access.
+if [ -z "$GENERATED_WAHA_SWAGGER_PASSWORD" ]; then
   GENERATED_WAHA_SWAGGER_PASSWORD="$(generate_secret)"
   UPDATED_SECRETS=1
 fi
@@ -118,10 +121,9 @@ export WAHA_DASHBOARD_ENABLED="$CONFIG_DASHBOARD_ENABLED"
 export WAHA_DASHBOARD_USERNAME="$CONFIG_DASHBOARD_USERNAME"
 export WAHA_DASHBOARD_PASSWORD
 export WHATSAPP_SWAGGER_ENABLED="$CONFIG_SWAGGER_ENABLED"
-if [ "$CONFIG_SWAGGER_ENABLED" = "true" ]; then
-  export WHATSAPP_SWAGGER_USERNAME="$CONFIG_DASHBOARD_USERNAME"
-  export WHATSAPP_SWAGGER_PASSWORD="$GENERATED_WAHA_SWAGGER_PASSWORD"
-fi
+# Always supplied, even when Swagger is disabled — see the note above.
+export WHATSAPP_SWAGGER_USERNAME="$CONFIG_DASHBOARD_USERNAME"
+export WHATSAPP_SWAGGER_PASSWORD="$GENERATED_WAHA_SWAGGER_PASSWORD"
 export WHATSAPP_DEFAULT_ENGINE="$CONFIG_DEFAULT_ENGINE"
 export WAHA_LOCAL_STORE_BASE_DIR="$CONFIG_LOCAL_STORE_BASE_DIR"
 export WAHA_LOG_LEVEL="$CONFIG_LOG_LEVEL"
