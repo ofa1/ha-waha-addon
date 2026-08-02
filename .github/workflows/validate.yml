@@ -1,0 +1,61 @@
+name: Validate
+
+# The add-on is built by the Home Assistant Supervisor on the device itself
+# (build: true), so nothing here produces an artefact. These checks exist
+# because a bad ingress config takes WhatsApp down: with `set -e` in run.sh a
+# failing `nginx -t` terminates the container, and that has already happened.
+#
+# Run the same checks locally before bumping the version:
+#   ./waha/tests/validate.sh
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "waha/**"
+      - ".github/workflows/validate.yml"
+  pull_request:
+    paths:
+      - "waha/**"
+      - ".github/workflows/validate.yml"
+  workflow_dispatch:
+
+# A superseded run tells you nothing useful once a newer commit is in flight.
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Config and routing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Plain `nginx`, matching the Dockerfile — nginx-light ships without
+      # ngx_http_sub_module, which is the module the routing tests exercise.
+      - name: Install nginx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nginx
+          nginx -V 2>&1 | tr ' ' '\n' | grep -q -- --with-http_sub_module \
+            || { echo "::error::nginx built without http_sub_module"; exit 1; }
+
+      # Boots the rendered ingress config against a stub upstream and asserts
+      # the routing behaviour. Every assertion maps to a shipped regression;
+      # see the comments in the script.
+      - name: Validate add-on
+        run: ./waha/tests/validate.sh
+
+  lint:
+    name: Add-on manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Schema-checks config.yaml against what the Supervisor accepts, which
+      # the routing tests above cannot see.
+      - name: Lint add-on config
+        uses: frenck/action-addon-linter@v2
+        with:
+          path: "./waha"

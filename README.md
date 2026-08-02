@@ -24,9 +24,30 @@ Or add it manually:
 
 ## What this add-on does
 
-- Uses the browserless `devlikeapro/waha:noweb-arm` image, suitable for Raspberry Pi / HAOS on ARM.
+- Uses the browserless `devlikeapro/waha:noweb-arm-*` image, suitable for Raspberry Pi / HAOS on ARM.
 - Defaults to the **GOWS** engine, with **NOWEB** as the recommended fallback if channel posting is engine-sensitive.
 - Persists WAHA sessions under `/data/.sessions`, so QR pairing survives add-on restarts and Home Assistant backups.
 - Browser access uses Home Assistant ingress through an internal Nginx proxy, so no host port is exposed by default.
 
-See [`waha/DOCS.md`](waha/DOCS.md) for setup, security, Cloudflare Tunnel notes, and channel-post testing.
+See [`waha/DOCS.md`](waha/DOCS.md) for setup, Cloudflare Tunnel notes, and channel-post testing, and [`waha/SECURITY.md`](waha/SECURITY.md) for the threat model and residual risks.
+
+## Development
+
+The Supervisor builds this add-on on the Home Assistant device itself, so a
+broken ingress config is only discovered at deploy time — and because `run.sh`
+runs under `set -e`, a failing `nginx -t` takes WhatsApp down with it. Validate
+before bumping `version:` in `waha/config.yaml`:
+
+```bash
+./waha/tests/validate.sh
+```
+
+It renders the ingress template, boots it against a stub upstream, and asserts
+the routing behaviour. Every assertion corresponds to a regression that has
+actually shipped; see [`waha/CHANGELOG.md`](waha/CHANGELOG.md). Requires
+`nginx` and `python3`. The same script runs in CI on every push and pull
+request touching `waha/`.
+
+> Note: the add-on has `auto_update` enabled, so a push to `main` deploys
+> without waiting for CI. Turn it off in the add-on's Supervisor settings if you
+> want these checks to act as a gate rather than an after-the-fact alarm.
