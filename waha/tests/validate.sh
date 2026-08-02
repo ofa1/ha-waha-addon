@@ -172,11 +172,15 @@ fi
 # A stub upstream whose JSON body legitimately contains the strings the
 # dashboard rewrite rules look for.
 cat > "$WORK/backend.py" <<PY
-import http.server
+import http.server, sys
 BODY = b'{"text":"see \\"/api/docs and \\"/dashboard tips"}'
+# The status the upstream returns for the path /healthz proxies to. Varied by
+# the caller so the healthcheck can be shown to reflect upstream health.
+STATUS = int(sys.argv[1]) if len(sys.argv) > 1 else 200
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
+        code = STATUS if self.path == "/api/server/status" else 200
+        self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(BODY)))
         self.end_headers()
@@ -184,14 +188,22 @@ class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 http.server.HTTPServer(("127.0.0.1", $BACKEND_PORT), H).serve_forever()
 PY
-python3 "$WORK/backend.py" &
-BACKEND_PID=$!
-"$NGINX_BIN" -c "$WORK/nginx.conf" -p "$WORK" 2>/dev/null
 
-for _ in $(seq 50); do
-  curl -fsS --max-time 1 -o /dev/null "http://127.0.0.1:$BACKEND_PORT/" 2>/dev/null && break
-  sleep 0.1
-done
+start_backend() {
+  if [ -n "${BACKEND_PID:-}" ]; then
+    kill "$BACKEND_PID" 2>/dev/null || true
+    wait "$BACKEND_PID" 2>/dev/null || true
+  fi
+  python3 "$WORK/backend.py" "$1" &
+  BACKEND_PID=$!
+  for _ in $(seq 50); do
+    curl -fsS --max-time 1 -o /dev/null "http://127.0.0.1:$BACKEND_PORT/" 2>/dev/null && return
+    sleep 0.1
+  done
+}
+
+start_backend 200
+"$NGINX_BIN" -c "$WORK/nginx.conf" -p "$WORK" 2>/dev/null
 
 get()      { curl -sS -H 'X-Ingress-Path: /PFX' "http://127.0.0.1:$NGINX_PORT$1"; }
 head_of()  { curl -sSi -H 'X-Ingress-Path: /PFX' "http://127.0.0.1:$NGINX_PORT$1"; }
@@ -246,7 +258,7 @@ fi
 # /healthz means the add-on restart-loops or never recovers.
 code=$(status_of /healthz)
 if [ "$code" = "200" ]; then
-  pass "/healthz returns 200 from loopback"
+  pass "/healthz returns 200 when WAHA is healthy"
 else
   fail "/healthz returned $code (expected 200) — the watchdog would flap"
 fi
@@ -255,6 +267,19 @@ if grep -q 'HEALTHCHECK' "$ADDON_DIR/Dockerfile"; then
 else
   fail "no HEALTHCHECK — the Supervisor watchdog has nothing to read"
 fi
+
+# The probe has to reflect WAHA's health, not just that Nginx is listening.
+# `access_log off` on /healthz means a silently-failing probe leaves no trace:
+# the add-on would restart-loop with nothing in the log to explain it. Point
+# the upstream at a failure and confirm the status propagates.
+start_backend 503
+code=$(status_of /healthz)
+if [ "$code" = "503" ]; then
+  pass "/healthz propagates upstream failure (probe reflects WAHA, not Nginx)"
+else
+  fail "/healthz returned $code with a failing upstream — the probe is not checking WAHA"
+fi
+start_backend 200
 
 # 0.1.5 / 0.1.7: the panel opens at `/` and redirects must stay relative.
 code=$(status_of /)
