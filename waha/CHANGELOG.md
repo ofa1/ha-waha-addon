@@ -2,6 +2,12 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.1.9 - 2026-08-01
+
+- Fix the add-on failing to start since 0.1.8. The `/channel-test/` page was inlined in the Nginx config as a single 4,936-byte quoted string, which overran Nginx's 4096-byte config token buffer and aborted `nginx -t` with `too long parameter, probably missing terminating "'" character`. Because `run.sh` runs under `set -e`, that config test failure terminated the whole container, taking WAHA down with it.
+- Serve `/channel-test/` as a static file (`channel-test.html`) instead. This also avoids Nginx's script engine trying to interpolate the `$` characters inside the page's JavaScript regexes, which would have failed with `invalid variable name`.
+- Derive the ingress prefix in the page from `window.location.pathname` rather than a templated `$ingress_path`.
+
 ## 0.1.8 - 2026-07-07
 
 - Add a simple Home Assistant ingress-only `/channel-test/` helper page that resolves a WhatsApp Channel invite link and sends one manual test post without exposing the WAHA API key to the browser.

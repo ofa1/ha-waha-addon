@@ -20,6 +20,7 @@ RUN apt-get update \
 
 COPY run.sh /run.sh
 COPY ingress.conf.template /etc/nginx/templates/waha-ingress.conf.template
+COPY channel-test.html /usr/share/waha-ingress/channel-test.html
 RUN chmod a+x /run.sh
 
 # Keep WAHA's upstream ENTRYPOINT (/usr/bin/tini --) and replace only CMD.
