@@ -115,7 +115,14 @@ http {
         # text starting with "/api or "/dashboard, which would silently corrupt
         # JSON payloads such as WhatsApp message bodies containing those
         # strings. Only the dashboard's own HTML/CSS/JS needs path rewriting.
-        location ^~ /api {
+        # Match `/api` and `/api/...` exactly. A bare `^~ /api` prefix would
+        # also swallow paths like `/apidocs`, which is Swagger UI HTML and does
+        # need the dashboard's path rewriting to render under ingress.
+        location = /api {
+            proxy_pass http://waha_backend;
+        }
+
+        location ^~ /api/ {
             proxy_pass http://waha_backend;
         }
 

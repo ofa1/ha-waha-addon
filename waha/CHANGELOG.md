@@ -2,6 +2,13 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.2.2 - 2026-08-01
+
+- Narrow the no-rewrite API location. `location ^~ /api` also matched paths
+  merely starting with `/api`, such as `/apidocs` — Swagger UI HTML, which does
+  need the dashboard's path rewriting to render under ingress. Split into
+  `= /api` and `^~ /api/` so only real API paths bypass `sub_filter`.
+
 ## 0.2.1 - 2026-08-01
 
 - Actually stop the Swagger password leak. 0.2.0 assumed that disabling Swagger
