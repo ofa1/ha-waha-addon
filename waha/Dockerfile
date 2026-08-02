@@ -26,5 +26,13 @@ COPY ingress.conf.template /etc/nginx/templates/waha-ingress.conf.template
 COPY channel-test.html /usr/share/waha-ingress/channel-test.html
 RUN chmod a+x /run.sh
 
+# Drives the Supervisor watchdog. The config.yaml `watchdog:` key is obsolete;
+# Home Assistant reads container health instead. Probing /healthz goes through
+# Nginx *and* on to WAHA, so "unhealthy" means WhatsApp stopped answering
+# rather than just that the proxy is listening. Node is used because it is
+# guaranteed present in the WAHA image; curl is not.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:8099/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
 # Keep WAHA's upstream ENTRYPOINT (/usr/bin/tini --) and replace only CMD.
 CMD ["/run.sh"]

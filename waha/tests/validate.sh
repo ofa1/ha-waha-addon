@@ -242,6 +242,20 @@ else
   pass "framing not restricted (required for the HA ingress iframe)"
 fi
 
+# 0.2.3: the Docker HEALTHCHECK drives the Supervisor watchdog, so a broken
+# /healthz means the add-on restart-loops or never recovers.
+code=$(status_of /healthz)
+if [ "$code" = "200" ]; then
+  pass "/healthz returns 200 from loopback"
+else
+  fail "/healthz returned $code (expected 200) — the watchdog would flap"
+fi
+if grep -q 'HEALTHCHECK' "$ADDON_DIR/Dockerfile"; then
+  pass "Dockerfile declares a HEALTHCHECK"
+else
+  fail "no HEALTHCHECK — the Supervisor watchdog has nothing to read"
+fi
+
 # 0.1.5 / 0.1.7: the panel opens at `/` and redirects must stay relative.
 code=$(status_of /)
 if [ "$code" = "302" ]; then

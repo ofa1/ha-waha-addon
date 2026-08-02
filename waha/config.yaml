@@ -1,30 +1,27 @@
 name: "WAHA WhatsApp API"
-version: "0.2.2"
+version: "0.2.3"
 slug: "waha_whatsapp_api"
 description: "Self-hosted WAHA WhatsApp HTTP API for HAOS; useful for dedicated WhatsApp Channel posting automation."
 url: "https://github.com/ofa1/ha-waha-addon"
 arch:
   - aarch64
 startup: services
-boot: auto
 init: false
 stage: experimental
 panel_icon: mdi:whatsapp
 panel_title: WAHA
 # Browser access is routed through Home Assistant ingress. The internal Nginx
-# proxy listens on 8099 and forwards/rewrite requests to WAHA on 3000.
+# proxy listens on the default ingress port 8099 and forwards/rewrites
+# requests to WAHA on 3000.
+#
+# `panel_admin` is not set: it already defaults to true, and it governs sidebar
+# visibility rather than access to the ingress URL. See SECURITY.md.
+#
+# The Supervisor watchdog is driven by the Dockerfile's HEALTHCHECK; the
+# `watchdog:` key here is obsolete.
 ingress: true
-ingress_port: 8099
 ingress_entry: "/"
 ingress_stream: true
-# Restrict the sidebar panel to Home Assistant admins. Anyone who can open the
-# panel reaches WAHA with admin credentials injected by the ingress proxy, so
-# this should not be relaxed. Note this governs the panel, not the raw ingress
-# URL; see SECURITY.md for the known Home Assistant limitation.
-panel_admin: true
-# Let the Supervisor restart the add-on if the ingress proxy stops answering,
-# rather than leaving WhatsApp unreachable until someone notices.
-watchdog: "tcp://[HOST]:8099"
 ports:
   3000/tcp: null
 ports_description:

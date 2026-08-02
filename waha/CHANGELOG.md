@@ -2,6 +2,19 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.2.3 - 2026-08-01
+
+Fixes reported by the Home Assistant add-on linter, now running in CI.
+
+- Replace the obsolete `watchdog:` config key with a Docker `HEALTHCHECK`.
+  Home Assistant reads container health for the Supervisor watchdog now. The
+  probe hits a new loopback-only `/healthz` location that proxies through to
+  WAHA, so "unhealthy" means WhatsApp stopped answering rather than merely that
+  Nginx is still accepting sockets.
+- Drop `panel_admin`, `boot` and `ingress_port`. All three were set to their
+  default values. `panel_admin: true` in 0.2.0 was therefore a no-op rather
+  than a hardening change; SECURITY.md has been corrected.
+
 ## 0.2.2 - 2026-08-01
 
 - Narrow the no-rewrite API location. `location ^~ /api` also matched paths

@@ -76,6 +76,21 @@ http {
         proxy_set_header X-Api-Key "__WAHA_API_KEY__";
         proxy_set_header Accept-Encoding "";
 
+        # Container-local probe for the Dockerfile's HEALTHCHECK, which drives
+        # the Supervisor watchdog. It proxies to WAHA rather than just
+        # returning 200, so an unhealthy result means "WhatsApp is not
+        # answering", not merely "nginx accepted a socket".
+        #
+        # Loopback only: the location-level rules replace the server-level
+        # ingress-gateway ACL, so this is never reachable from outside.
+        location = /healthz {
+            allow 127.0.0.1;
+            allow ::1;
+            deny all;
+            access_log off;
+            proxy_pass http://waha_backend/api/server/status;
+        }
+
         # The add-on panel opens ingress at `/`. WAHA serves the dashboard
         # under `/dashboard`, so redirect the ingress root there.
         location = / {

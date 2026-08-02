@@ -82,12 +82,17 @@ any add-on you install as having network reach to WAHA.
 
 ### Ingress access is not reliably restricted to admins
 
-`panel_admin: true` keeps the add-on out of a non-admin user's sidebar. It is
-**not** a reliable authorization boundary: Home Assistant users have reported
-non-admin accounts reaching add-on ingress URLs directly despite this setting,
-and Home Assistant does not enforce role-based access on the ingress path.
-Because the proxy injects admin credentials, anyone who does reach the ingress
-URL gets full WAHA access.
+`panel_admin` keeps the add-on out of a non-admin user's sidebar. It already
+defaults to `true`, so there is nothing to switch on — and it is **not** a
+reliable authorization boundary: Home Assistant users have reported non-admin
+accounts reaching add-on ingress URLs directly despite this setting, and Home
+Assistant does not enforce role-based access on the ingress path. Because the
+proxy injects admin credentials, anyone who does reach the ingress URL gets
+full WAHA access.
+
+The enforceable version of this control is an allowlist on the
+`X-Remote-User-Id` header that the Supervisor injects into every ingress
+request. That is not implemented here yet.
 
 If your instance has non-admin users, verify this behaviour yourself rather than
 assuming the setting protects you.
@@ -105,8 +110,11 @@ log, including your phone number, LID, push name, and chat IDs. The default is
 
 `run.sh` runs under `set -e` and validates the Nginx config with `nginx -t`
 before starting WAHA, so a bad config now fails before WhatsApp comes up rather
-than tearing down a live session. If Nginx dies later, the supervision loop
-exits and the Supervisor watchdog (`tcp://[HOST]:8099`) restarts the add-on.
+than tearing down a live session. If either process dies later, the supervision
+loop exits and the container stops; the Docker `HEALTHCHECK` then reports
+unhealthy and the Supervisor watchdog restarts the add-on. The healthcheck
+probes `/healthz`, which proxies through to WAHA, so it fails when WhatsApp
+stops answering and not only when Nginx does.
 
 WAHA is still not kept running independently of the proxy. That is a deliberate
 trade-off: a running WAHA with no reachable UI is harder to notice than a
