@@ -67,7 +67,13 @@ http {
             # Served as a real file: an inline `return 200 '...'` string would
             # blow past nginx's 4096-byte config token buffer, and nginx would
             # also try to interpolate the `$` characters inside the page JS.
-            alias /usr/share/waha-ingress/channel-test.html;
+            #
+            # Use root + try_files rather than `alias <file>`. This URI ends in
+            # `/`, so nginx treats it as a directory request and appends the
+            # index to the alias value, producing the bogus concatenated path
+            # `channel-test.htmlindex.html`. try_files skips index handling.
+            root /usr/share/waha-ingress;
+            try_files /channel-test.html =404;
         }
 
         # Forward static dashboard assets, API, swagger, and any other WAHA path.
@@ -91,7 +97,8 @@ http {
             # WAHA's dashboard can emit absolute paths. Rewrite common HTML/CSS/JS
             # references so they remain under the HA ingress prefix.
             sub_filter_once off;
-            sub_filter_types text/html text/css application/javascript text/javascript application/json;
+            # text/html is always included by nginx; listing it again warns.
+            sub_filter_types text/css application/javascript text/javascript application/json;
             sub_filter 'href="/' 'href="$ingress_path/';
             sub_filter 'src="/' 'src="$ingress_path/';
             sub_filter 'action="/' 'action="$ingress_path/';

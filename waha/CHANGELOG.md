@@ -2,6 +2,11 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.1.10 - 2026-08-01
+
+- Fix `/channel-test/` returning HTTP 500. The `alias <file>` added in 0.1.9 does not work in a location whose URI ends in `/`: Nginx treats it as a directory request and appends the index filename to the alias value, producing the bogus path `channel-test.htmlindex.html`. Serve the page with `root` + `try_files` instead, which skips index handling.
+- Drop the redundant `text/html` from `sub_filter_types` (Nginx always includes it) to clear a startup warning.
+
 ## 0.1.9 - 2026-08-01
 
 - Fix the add-on failing to start since 0.1.8. The `/channel-test/` page was inlined in the Nginx config as a single 4,936-byte quoted string, which overran Nginx's 4096-byte config token buffer and aborted `nginx -t` with `too long parameter, probably missing terminating "'" character`. Because `run.sh` runs under `set -e`, that config test failure terminated the whole container, taking WAHA down with it.
