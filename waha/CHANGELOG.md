@@ -2,6 +2,11 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.1.11 - 2026-08-01
+
+- Populate the `/channel-test/` session field from `GET /api/sessions` instead of hardcoding `default`. WAHA generates session names (e.g. `session_01kwy9...`), so the hardcoded value produced a confusing `HTTP 422 Session "default" does not exist`. A single WORKING session is selected automatically; otherwise all sessions are offered as suggestions.
+- Fail with a clear message when no session is selected, rather than silently retrying `default`.
+
 ## 0.1.10 - 2026-08-01
 
 - Fix `/channel-test/` returning HTTP 500. The `alias <file>` added in 0.1.9 does not work in a location whose URI ends in `/`: Nginx treats it as a directory request and appends the index filename to the alias value, producing the bogus path `channel-test.htmlindex.html`. Serve the page with `root` + `try_files` instead, which skips index handling.
