@@ -68,11 +68,13 @@ merely a member receives nothing at all.
 ### 3. Add the Telegram Bot integration
 
 **Settings → Devices & Services → Add Integration → Telegram bot**, choose
-**polling**, and paste the token. Polling needs no public URL, so this works
-behind your Cloudflare tunnel with no extra exposure.
+**polling**, and paste the token. Leave the "Additional settings" section
+alone — the default API endpoint is correct and the proxy field is optional.
+Polling needs no public URL, so this works behind your Cloudflare tunnel with
+no extra exposure.
 
-It will ask for an allowed chat. You do not know your channel's ID yet — put
-your own Telegram user ID in for now, and come back after step 4.
+The setup form does *not* ask for a chat ID. Allowed chats are added
+afterwards as sub-entries, which is step 4.
 
 ### 4. Find your channel's chat ID
 
@@ -90,8 +92,9 @@ That `-100…` number is your channel's chat ID.
 > event. Until the channel is in the allowed list, no `telegram_text` event
 > exists to inspect — the probe automation below will show you nothing.
 
-Now add that chat ID to the Telegram Bot integration: open the integration →
-**Add sub-entry** → paste the channel ID. Post again and confirm the
+Now authorise it: **Settings → Devices & Services → Telegram bot → Add allowed
+chat ID**, and paste the `-100…` number (digits and the leading minus only —
+the field takes an integer). Post in the channel again and confirm the
 unauthorized error has stopped.
 
 ### 5. Add the REST commands
