@@ -20,13 +20,26 @@ Telegram channel
 telegram_bot integration ──fires──► telegram_text / telegram_attachment event
       ▼
 automation.telegram_channel_to_whatsapp_channel_mirror
-      │  1. dedupe on message id
-      │  2. for media: getFile → a path (no bytes enter Home Assistant)
-      ▼
-rest_command ──► WAHA add-on :3000 ──fetches the media itself──► Telegram
+      │  dedupe on message id, then split by event type
+      │
+      ├─ text ──► waha.send_text ──────────────► WAHA add-on :3000
+      │
+      └─ media ─► rest_command: Telegram getFile → a file path
+                  (no bytes enter Home Assistant)
+                        │
+                        ▼
+                  rest_command ──► WAHA :3000 ──fetches the media──► Telegram
       ▼
 WhatsApp Channel
 ```
+
+The two halves are asymmetric, and the reason is worth stating once: text goes
+through the [`waha` integration](../custom_components/waha/), so there is no
+YAML and no API key in `secrets.yaml` for that path. Media cannot, because
+Telegram's file download URL embeds the bot token and `!secret` is only
+resolvable from YAML configuration — not from automations, templates, or
+anything written through the config API. So the media path keeps two
+`rest_command`s and the WAHA API key in `secrets.yaml`.
 
 The media handoff is the part worth understanding: Home Assistant never
 downloads the file. It asks Telegram for the file *path*, builds a URL, and
@@ -53,7 +66,15 @@ openssl rand -hex 32
 Then **Settings → Add-ons → WAHA WhatsApp API → Configuration**, put it in
 `api_key`, save, and restart the add-on. Config-only; no rebuild.
 
-Keep this value — it goes into `secrets.yaml` in step 5.
+Keep this value. It is used twice: once in the `waha` integration's setup form,
+and once in `secrets.yaml` for the media path (step 5).
+
+Then install the integration — HACS → ⋮ → Custom repositories → this repository
+with category **Integration** → install → restart Home Assistant → **Settings →
+Devices & Services → Add Integration → WAHA WhatsApp API**. See
+[the integration's README](../custom_components/waha/README.md) for what goes in
+each field. It also gives you a session-status sensor, which is the only thing
+that will tell you the WhatsApp session has dropped.
 
 ### 2. Create the Telegram bot and make it a channel admin
 
@@ -114,18 +135,12 @@ rest_command:
     method: get
     timeout: 30
 
-  # Text posts. `endpoint` and `body` are supplied by the automation.
-  tg_mirror_waha_send:
-    url: "http://a6137ac8-waha-whatsapp-api:3000/api/{{ endpoint }}"
-    method: post
-    content_type: "application/json"
-    payload: "{{ body | tojson }}"
-    headers:
-      X-Api-Key: !secret waha_api_key
-    timeout: 60
-
   # Media posts. The payload template is a secret too, because it has to embed
   # the bot token in the file URL that WAHA fetches.
+  #
+  # There is deliberately no equivalent for text posts: those go through
+  # `waha.send_text`, which needs no YAML and holds the API key in its config
+  # entry rather than here.
   tg_mirror_waha_send_media:
     url: "http://a6137ac8-waha-whatsapp-api:3000/api/{{ endpoint }}"
     method: post
@@ -266,8 +281,11 @@ Check in this order:
    with the Telegram message ID.
 3. **`Unauthorized update`** in the log means the chat ID in the Telegram Bot
    integration does not match the channel.
-4. **HTTP 401 from WAHA** means `waha_api_key` in `secrets.yaml` does not match
-   the add-on's `api_key`.
+4. **HTTP 401 from WAHA on a media post** means `waha_api_key` in
+   `secrets.yaml` does not match the add-on's `api_key`. If *text* posts fail
+   on authentication instead, the stale key is in the `waha` integration —
+   Home Assistant will raise a reauth prompt for it rather than a 401 in the
+   trace.
 5. **HTTP 422 mentioning the session** means the session name changed — WAHA
    regenerates it on re-pair. Update the `TG Mirror WAHA Session` helper.
 6. **Nothing happens at all, and the trace shows condition 3 failing** — the
@@ -286,7 +304,14 @@ the traces: condition matching, the dedupe counter, the MIME dispatch
 (`tg-502.jpeg`), the no-MIME skip, and the 20 MB skip all behave as documented.
 The payload template is covered by `tests/test_mirror_templates.py`.
 
-Not verified, because they need live credentials: the two HTTP calls
-themselves — Telegram's `getFile` and WAHA's send endpoints. Your first real
-post is the test for those, which is why the troubleshooting list above starts
-with the automation trace.
+The WhatsApp side has since been verified against live credentials:
+`waha.send_text` and `waha.send_media` were both confirmed to post to a real
+WhatsApp Channel, and a synthetic `telegram_text` event was run through the
+whole automation — conditions, dedupe counter, text branch, throttle — landing
+a post in WhatsApp.
+
+Still not verified, because it needs a real Telegram attachment: the media
+branch's two HTTP calls, Telegram's `getFile` and the `rest_command` that hands
+the resulting URL to WAHA. Your first real photo or voice note in the channel is
+the test for those, which is why the troubleshooting list above starts with the
+automation trace.
