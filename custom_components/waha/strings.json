@@ -1,0 +1,132 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to WAHA",
+        "description": "Running WAHA as a Home Assistant add-on? The host is the add-on's hostname, shown on its info page — the slug with every underscore replaced by a hyphen, for example `a1b2c3d4-waha-whatsapp-api`. The API key is the add-on's `api_key` option.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "api_key": "API key",
+          "session": "Default session",
+          "ssl": "Connect over HTTPS"
+        },
+        "data_description": {
+          "session": "Used by service calls that do not name a session of their own."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure WAHA",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "api_key": "API key",
+          "session": "Default session",
+          "ssl": "Connect over HTTPS"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-enter the WAHA API key",
+        "description": "WAHA at {host} rejected the stored API key. Enter the current one.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach WAHA. Check the host and port, and that the add-on is running.",
+      "invalid_auth": "WAHA rejected the API key.",
+      "invalid_host": "Enter a hostname or IP address.",
+      "unknown": "Unexpected response from WAHA. Check the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "This WAHA server is already configured.",
+      "reauth_successful": "Reconnected to WAHA.",
+      "reconfigure_successful": "WAHA settings updated.",
+      "wrong_server": "Those settings point at a different WAHA server. Add it as a new entry instead."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "session_status": {
+        "name": "{session} status"
+      }
+    }
+  },
+  "exceptions": {
+    "entry_not_found": {
+      "message": "No WAHA configuration entry with ID {entry_id}."
+    },
+    "entry_not_loaded": {
+      "message": "The WAHA entry \"{title}\" is not loaded."
+    },
+    "no_entries": {
+      "message": "No WAHA server is configured."
+    },
+    "entry_id_required": {
+      "message": "More than one WAHA server is configured. Set config_entry_id to choose one."
+    }
+  },
+  "services": {
+    "send_text": {
+      "name": "Send text",
+      "description": "Sends a text message through WAHA.",
+      "fields": {
+        "config_entry_id": {
+          "name": "WAHA server",
+          "description": "Which WAHA server to send through. Optional while only one is configured."
+        },
+        "chat_id": {
+          "name": "Chat ID",
+          "description": "Recipient. A channel looks like 120363000000000000@newsletter; a contact like 12025550100@c.us."
+        },
+        "text": {
+          "name": "Message",
+          "description": "The message body."
+        },
+        "session": {
+          "name": "Session",
+          "description": "WAHA session to send from. Defaults to the entry's session."
+        },
+        "link_preview": {
+          "name": "Link preview",
+          "description": "Whether WhatsApp should render a preview for links in the message."
+        }
+      }
+    },
+    "send_media": {
+      "name": "Send media",
+      "description": "Sends an image, video, audio file or document by URL. WAHA downloads it itself, so the file never passes through Home Assistant.",
+      "fields": {
+        "config_entry_id": {
+          "name": "WAHA server",
+          "description": "Which WAHA server to send through. Optional while only one is configured."
+        },
+        "chat_id": {
+          "name": "Chat ID",
+          "description": "Recipient. A channel looks like 120363000000000000@newsletter; a contact like 12025550100@c.us."
+        },
+        "url": {
+          "name": "File URL",
+          "description": "URL WAHA fetches the file from. It must be reachable from the WAHA container, not from your browser."
+        },
+        "filename": {
+          "name": "File name",
+          "description": "Name WhatsApp shows for the file."
+        },
+        "mimetype": {
+          "name": "MIME type",
+          "description": "Chooses how the file is sent: image/* as a photo, video/* as a video, audio/* as a voice note (transcoded), anything else as a document."
+        },
+        "caption": {
+          "name": "Caption",
+          "description": "Text shown with the file. Ignored for audio, which WhatsApp sends as a voice note with no caption."
+        },
+        "session": {
+          "name": "Session",
+          "description": "WAHA session to send from. Defaults to the entry's session."
+        }
+      }
+    }
+  }
+}

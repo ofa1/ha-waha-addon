@@ -13,10 +13,16 @@ on:
     branches: [main]
     paths:
       - "waha/**"
+      - "custom_components/**"
+      - "tests/**"
+      - "hacs.json"
       - ".github/workflows/validate.yml"
   pull_request:
     paths:
       - "waha/**"
+      - "custom_components/**"
+      - "tests/**"
+      - "hacs.json"
       - ".github/workflows/validate.yml"
   workflow_dispatch:
 
@@ -67,3 +73,30 @@ jobs:
         uses: frenck/action-addon-linter@v2
         with:
           path: "./waha"
+
+  integration:
+    name: Custom integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The MIME routing and payload construction that used to live in a Jinja
+      # template in the user's secrets.yaml. Needs aiohttp only — the test
+      # loads api.py directly rather than importing the Home Assistant package.
+      - name: Validate WAHA client
+        run: |
+          pip install --quiet aiohttp
+          python3 tests/test_waha_api.py
+
+      # Home Assistant's own manifest/translation/services validator.
+      - name: Hassfest
+        uses: home-assistant/actions/hassfest@master
+
+      # `ignore: brands` because there is no logo for `waha` in
+      # home-assistant/brands, and there will not be one for a custom
+      # integration that is not submitted to core.
+      - name: HACS
+        uses: hacs/action@main
+        with:
+          category: integration
+          ignore: brands

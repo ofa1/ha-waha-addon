@@ -31,6 +31,21 @@ Or add it manually:
 
 See [`waha/DOCS.md`](waha/DOCS.md) for setup, Cloudflare Tunnel notes, and channel-post testing, and [`waha/SECURITY.md`](waha/SECURITY.md) for the threat model and residual risks.
 
+## Home Assistant integration
+
+This repository also ships a custom integration,
+[`custom_components/waha`](custom_components/waha/), installable through HACS as
+a **custom repository** with category *Integration*. It adds a config flow for
+the API key, a session-status sensor, and `waha.send_text` / `waha.send_media`
+services — so automations call actions instead of hand-written `rest_command`
+blocks, and the MIME-type routing lives in tested Python rather than in a Jinja
+template in your `secrets.yaml`.
+
+The Supervisor and HACS read different files (`repository.yaml` + `waha/` versus
+`hacs.json` + `custom_components/`), so the same repository serves both. They
+are independent: the add-on works without the integration, and the integration
+works against any reachable WAHA.
+
 ## Mirroring a Telegram channel
 
 [`waha/TELEGRAM-MIRROR.md`](waha/TELEGRAM-MIRROR.md) sets up one-way replication
@@ -62,6 +77,16 @@ JSON for every media type:
 ```bash
 python3 ./waha/tests/test_mirror_templates.py   # needs jinja2
 ```
+
+The integration's MIME routing and payload construction are checked the same
+way, without needing Home Assistant installed:
+
+```bash
+python3 ./tests/test_waha_api.py                # needs aiohttp
+```
+
+CI additionally runs Home Assistant's `hassfest` and the HACS action against
+`custom_components/waha`.
 
 > Note: the add-on has `auto_update` enabled, so a push to `main` deploys
 > without waiting for CI. Turn it off in the add-on's Supervisor settings if you

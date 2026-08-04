@@ -1,0 +1,65 @@
+send_text:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: waha
+    chat_id:
+      required: true
+      example: "120363000000000000@newsletter"
+      selector:
+        text:
+    text:
+      required: true
+      example: "Hello from Home Assistant"
+      selector:
+        text:
+          multiline: true
+    session:
+      required: false
+      example: default
+      selector:
+        text:
+    link_preview:
+      required: false
+      selector:
+        boolean:
+
+send_media:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: waha
+    chat_id:
+      required: true
+      example: "120363000000000000@newsletter"
+      selector:
+        text:
+    url:
+      required: true
+      example: "https://example.org/photo.jpg"
+      selector:
+        text:
+    filename:
+      required: true
+      example: photo.jpg
+      selector:
+        text:
+    mimetype:
+      required: false
+      example: image/jpeg
+      selector:
+        text:
+    caption:
+      required: false
+      selector:
+        text:
+          multiline: true
+    session:
+      required: false
+      example: default
+      selector:
+        text:

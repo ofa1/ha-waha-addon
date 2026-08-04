@@ -1,0 +1,12 @@
+{
+  "domain": "waha",
+  "name": "WAHA WhatsApp API",
+  "codeowners": ["@ofa1"],
+  "config_flow": true,
+  "documentation": "https://github.com/ofa1/ha-waha-addon/blob/main/custom_components/waha/README.md",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/ofa1/ha-waha-addon/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
