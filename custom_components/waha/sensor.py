@@ -61,12 +61,14 @@ class WahaSessionSensor(CoordinatorEntity[WahaCoordinator], SensorEntity):
         self._session_name = session_name
         self._attr_unique_id = f"{entry.entry_id}_{session_name}_status"
         self._attr_translation_placeholders = {"session": session_name}
+        # No configuration_url: the base URL is usually a Supervisor-internal
+        # hostname that a browser cannot resolve, so a "Visit" link would be
+        # dead. WAHA's UI is reached through the add-on's ingress panel.
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
             manufacturer="devlike.pro",
             model="WAHA",
-            configuration_url=coordinator.client.base_url,
         )
 
     @property

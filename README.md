@@ -41,6 +41,10 @@ services — so automations call actions instead of hand-written `rest_command`
 blocks, and the MIME-type routing lives in tested Python rather than in a Jinja
 template in your `secrets.yaml`.
 
+`waha.send_media` takes a URL, so it replaces a `rest_command` only where that
+URL needs no further authentication. The Telegram mirror below is a case where
+it does not — see the integration's README for why.
+
 The Supervisor and HACS read different files (`repository.yaml` + `waha/` versus
 `hacs.json` + `custom_components/`), so the same repository serves both. They
 are independent: the add-on works without the integration, and the integration

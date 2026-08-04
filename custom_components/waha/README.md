@@ -12,8 +12,16 @@ It gives you:
   when WhatsApp disconnects instead of you finding out from silence;
 - two services — **`waha.send_text`** and **`waha.send_media`**.
 
-It replaces the three `rest_command` definitions and the hand-written JSON
-payload template that the Telegram mirror used to need.
+### What it does not do
+
+It does **not** remove the need for `rest_command` in every case. `send_media`
+takes a URL, so it only helps when you already have one that WAHA can fetch
+without further authentication. The Telegram mirror in this repository does not:
+Telegram's file download URL embeds the bot token, and Home Assistant resolves
+`!secret` only in YAML configuration — not in automations, templates or the
+config API. So the mirror keeps one `rest_command` for its media path, and the
+WAHA API key stays in `secrets.yaml` for that one call. Its text path is a
+straight `waha.send_text`.
 
 ## Installing
 
@@ -105,7 +113,10 @@ Both services return the WAHA response when called with `response_variable`.
       to: "on"
   conditions:
     - condition: state
-      entity_id: sensor.waha_default_status
+      # Check the real entity_id in Developer Tools → States; it is derived
+      # from the config entry title and the session name, so it will look
+      # something like sensor.waha_a1b2c3d4_waha_whatsapp_api_default_status.
+      entity_id: sensor.CHANGE_ME_status
       state: WORKING
   actions:
     - action: waha.send_text
