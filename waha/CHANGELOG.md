@@ -2,6 +2,14 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.2.4 - 2026-11-24
+
+- Pin the base image to `devlikeapro/waha:noweb-arm-2026.10.1`. This picks up
+  upstream fixes including Node.js CVE-2026-111497 and dependency fixes for
+  `file-type`, `shell-quote` and `sharp`, plus NOWEB app-state sync fixes.
+  The image tag stays pinned deliberately: Supervisor will not pull a new
+  engine without a reviewed add-on release.
+
 ## 0.2.3 - 2026-08-01
 
 Fixes reported by the Home Assistant add-on linter, now running in CI.
