@@ -4,7 +4,7 @@
 # auto_update means a Supervisor rebuild could pull an untested upstream WAHA
 # without anyone initiating it. Bump this tag on purpose after reading WAHA's
 # release notes; see https://hub.docker.com/r/devlikeapro/waha/tags
-FROM devlikeapro/waha:noweb-arm-2026.7.2
+FROM devlikeapro/waha:noweb-arm-2026.10.1
 USER root
 
 ARG BUILD_VERSION

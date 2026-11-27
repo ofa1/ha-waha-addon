@@ -2,6 +2,13 @@
 
 All notable changes to the WAHA WhatsApp API Home Assistant add-on are documented here.
 
+## 0.2.4 - 2026-11-27
+
+- Update the pinned WAHA ARM image to `noweb-arm-2026.10.1` after the existing
+  GOWS session reported a `Client outdated (405)` connection failure. The upstream
+  release updates the GOWS engine and explicitly marks outdated clients as
+  `FAILED`.
+
 ## 0.2.3 - 2026-08-01
 
 Fixes reported by the Home Assistant add-on linter, now running in CI.
