@@ -27,7 +27,8 @@ printf '%s\n' '{"api_key":"smoke-test-key","dashboard_password":"smoke-test-pass
   > "$work/options.json"
 docker network create --internal --subnet 172.30.32.0/24 "$name" >/dev/null
 docker run -d --name "$name" --network "$name" --ip 172.30.32.3 \
-  --platform linux/arm64 --mount "type=bind,src=$work,dst=/data" "$image" >/dev/null
+  --platform linux/arm64 --tmpfs /data \
+  --mount "type=bind,src=$work/options.json,dst=/data/options.json,readonly" "$image" >/dev/null
 
 docker run --rm -i --network "$name" --ip 172.30.32.2 --platform linux/arm64 \
   --entrypoint node "$image" --input-type=module - <<'JS'
