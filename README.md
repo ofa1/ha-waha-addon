@@ -92,6 +92,16 @@ python3 ./tests/test_waha_api.py                # needs aiohttp
 CI additionally runs Home Assistant's `hassfest` and the HACS action against
 `custom_components/waha`.
 
-> Note: the add-on has `auto_update` enabled, so a push to `main` deploys
-> without waiting for CI. Turn it off in the add-on's Supervisor settings if you
-> want these checks to act as a gate rather than an after-the-fact alarm.
+### Dependency updates
+
+Renovate proposes GitHub Actions updates and versioned WAHA `noweb-arm-YYYY.M.P`
+image updates. Automerge is off. Each WAHA image PR must keep the exact ARM
+tag pinned in [`waha/Dockerfile`](waha/Dockerfile), bump the add-on version in
+[`waha/config.yaml`](waha/config.yaml), and add a matching
+[`waha/CHANGELOG.md`](waha/CHANGELOG.md) entry. Review upstream GOWS release notes
+before merging.
+
+CI does not pull or build the `linux/arm64` image or log into WhatsApp. Keep
+Supervisor auto-update off if you want rollout to be a separate decision from
+merge. After a controlled HAOS update, verify that the existing GOWS session
+returns to `WORKING` without re-pairing and that a test channel post succeeds.
