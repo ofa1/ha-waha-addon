@@ -1,17 +1,5 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "enabledManagers": ["github-actions", "dockerfile"],
-  "automerge": false,
-  "packageRules": [
-    {
-      "description": "Track only versioned browserless ARM releases of WAHA",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["devlikeapro/waha"],
-      "matchFileNames": ["waha/Dockerfile"],
-      "versioning": "regex:^noweb-arm-(?<major>[0-9]{4})\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$",
-      "prBodyNotes": [
-        "Before merging, bump the add-on version in `waha/config.yaml` and add a matching entry to `waha/CHANGELOG.md` in this PR. Review the upstream GOWS release notes. CI does not build the ARM image or test WhatsApp login."
-      ]
-    }
-  ]
+  "enabledManagers": ["github-actions"],
+  "automerge": false
 }

@@ -7,9 +7,7 @@ on:
       - "waha/**"
       - ".github/workflows/arm-smoke.yml"
   pull_request:
-    paths:
-      - "waha/**"
-      - ".github/workflows/arm-smoke.yml"
+    branches: [main]
   workflow_dispatch:
 
 permissions:

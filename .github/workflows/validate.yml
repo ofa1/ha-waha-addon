@@ -15,16 +15,15 @@ on:
       - "waha/**"
       - "custom_components/**"
       - "tests/**"
+      - ".github/scripts/**"
       - "hacs.json"
       - ".github/workflows/validate.yml"
   pull_request:
-    paths:
-      - "waha/**"
-      - "custom_components/**"
-      - "tests/**"
-      - "hacs.json"
-      - ".github/workflows/validate.yml"
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 # A superseded run tells you nothing useful once a newer commit is in flight.
 concurrency:
@@ -56,6 +55,9 @@ jobs:
         env:
           WAHA_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: ./waha/tests/validate.sh
+
+      - name: Test WAHA updater
+        run: python3 .github/scripts/test_update_waha.py
 
       # The Telegram-mirror payload template ships as a snippet users paste
       # into secrets.yaml, so nothing at runtime validates it. A malformed

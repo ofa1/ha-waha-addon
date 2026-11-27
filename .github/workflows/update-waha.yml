@@ -1,0 +1,81 @@
+name: Update WAHA
+
+on:
+  schedule:
+    - cron: '37 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: update-waha
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: waha-updater
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Prepare stable ARM update
+        id: update
+        run: |
+          version=$(python3 .github/scripts/update_waha.py)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Require protected CI gates before publishing
+        if: steps.update.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/branches/main" | jq -e '
+            .protected and (.protection.required_status_checks |
+              .enforcement_level == "everyone" and
+              ((["Config and routing", "Add-on manifest", "Custom integration", "Build and boot ARM add-on"] -
+                [.checks[] | select(.app_id == 15368) | .context]) | length == 0))' || {
+            echo '::error::main must require the four GitHub Actions checks for everyone before WAHA auto-merge.'
+            exit 1
+          }
+      - name: Get repository-scoped updater token
+        if: steps.update.outputs.version != ''
+        id: app
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3
+        with:
+          client-id: ${{ vars.WAHA_UPDATER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.WAHA_UPDATER_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Open or refresh the WAHA update PR
+        if: steps.update.outputs.version != ''
+        id: pr
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8
+        with:
+          token: ${{ steps.app.outputs.token }}
+          branch: automation/waha
+          base: main
+          add-paths: |
+            waha/Dockerfile
+            waha/config.yaml
+            waha/CHANGELOG.md
+          commit-message: 'Update WAHA to ${{ steps.update.outputs.version }}'
+          title: 'Update WAHA to ${{ steps.update.outputs.version }}'
+          body: |
+            Update the pinned browserless ARM image, bump the add-on patch version, and record the change in the add-on changelog.
+
+            [Upstream release notes](https://github.com/devlikeapro/waha/releases/tag/${{ steps.update.outputs.version }}).
+            Auto-merge requires the GitHub CI gates. Install separately in Home Assistant.
+      - name: Auto-merge only after required CI
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.pull-request-number }}
+          HEAD_SHA: ${{ steps.pr.outputs.pull-request-head-sha }}
+        run: gh pr merge "$PR_NUMBER" --auto --squash --match-head-commit "$HEAD_SHA"

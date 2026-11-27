@@ -70,8 +70,8 @@ and ingress routes locally before updating the add-on:
 It renders the ingress template, boots it against a stub upstream, and asserts
 the routing behaviour. Every assertion corresponds to a regression that has
 actually shipped; see [`waha/CHANGELOG.md`](waha/CHANGELOG.md). Requires
-`nginx` and `python3`. The same script runs in CI on every push and pull
-request touching `waha/`.
+`nginx` and `python3`. The same script runs in CI on every PR to `main`
+and on pushes affecting the add-on.
 
 The Telegram mirror's payload template is checked separately, by rendering the
 snippet straight out of `TELEGRAM-MIRROR.md` and asserting the result is valid
@@ -97,16 +97,35 @@ runner, boots it with throwaway data on an isolated network, and checks that
 
 ### Dependency updates
 
-Renovate proposes GitHub Actions updates and versioned WAHA `noweb-arm-YYYY.M.P`
-image updates. Automerge is off. Each WAHA image PR must keep the exact ARM
-tag pinned in [`waha/Dockerfile`](waha/Dockerfile), bump the add-on version in
-[`waha/config.yaml`](waha/config.yaml), and add a matching
-[`waha/CHANGELOG.md`](waha/CHANGELOG.md) entry. Review upstream GOWS release notes
-before merging.
+Renovate proposes GitHub Actions updates for manual review. The **Update WAHA**
+workflow checks daily for a newer stable upstream release with a published
+`noweb-arm-YYYY.M.P` image. It pins the ARM image by tag and digest, bumps the
+add-on patch version in [`waha/config.yaml`](waha/config.yaml), and adds a
+matching entry to [`waha/CHANGELOG.md`](waha/CHANGELOG.md) in one PR. Let the
+workflow manage its `automation/waha` branch; make manual fixes on another branch.
 
-CI rejects image updates without a higher add-on version and a matching
-changelog entry. The ARM smoke test does not run Supervisor, log into
-WhatsApp, or send a post. Keep Supervisor auto-update off if you want rollout
-to be a separate decision from merge. After a controlled HAOS update, verify
-that the existing GOWS session returns to `WORKING` without re-pairing and
-that a test channel post succeeds.
+The generated PR auto-merges only after GitHub's required checks pass.
+**Keep auto-update off in the Home Assistant add-on settings** before enabling
+the updater. Merge makes a new version available; install it separately.
+After installation, confirm the existing GOWS session returns to `WORKING`
+without re-pairing and send a test channel post. CI does not run Supervisor,
+log into WhatsApp, or send a post.
+
+#### Enable the WAHA updater
+
+1. Enable auto-merge and squash merging in the GitHub repository settings.
+2. Protect `main` for everyone (including admins). Require PR branches to be
+   up to date and require these checks from GitHub Actions: `Config and routing`,
+   `Add-on manifest`, `Custom integration`, and `Build and boot ARM add-on`.
+   Do not require a human approval or grant the updater a bypass.
+3. Create a private GitHub App with **Contents: Read and write** and
+   **Pull requests: Read and write**. Disable webhooks and install it on this
+   repository only. In the GitHub Actions environment `waha-updater`, allow
+   deployments only from the `main` branch (this environment stores updater
+   credentials, not a Home Assistant deployment). Set the variable
+   `WAHA_UPDATER_APP_CLIENT_ID` to the app's client ID and the secret
+   `WAHA_UPDATER_APP_PRIVATE_KEY` to its private key. The App token lets GitHub
+   start CI on the generated PR without an approval click.
+
+Disable the **Update WAHA** workflow to pause future proposals. If an update PR
+is already open, turn off its auto-merge separately.

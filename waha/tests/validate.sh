@@ -89,10 +89,10 @@ fi
 # 0.2.0: a floating tag plus auto_update let the Supervisor pull an untested
 # upstream WAHA unprompted.
 base=$(grep '^FROM ' "$ADDON_DIR/Dockerfile" | awk '{print $2}')
-if printf '%s' "$base" | grep -Eq '(@sha256:[0-9a-f]{64}|:[a-z-]*[0-9]{4}\.[0-9]+\.[0-9]+)$'; then
+if printf '%s' "$base" | grep -Eq '^devlikeapro/waha:noweb-arm-[0-9]{4}\.[0-9]+\.[0-9]+(@sha256:[0-9a-f]{64})?$'; then
   pass "base image is pinned: $base"
 else
-  fail "base image is not pinned to a version or digest: $base"
+  fail "base image must be a versioned noweb-arm WAHA image with an optional sha256 digest: $base"
 fi
 
 # A new base image is not offered to Supervisor unless the add-on version moves.
