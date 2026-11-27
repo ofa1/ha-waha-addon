@@ -80,7 +80,7 @@ fi
 
 # Stops a deploy that has no changelog entry, which is how a rollback target
 # gets lost.
-if head -20 "$ADDON_DIR/CHANGELOG.md" | grep -q "^## $version "; then
+if awk -v version="$version" 'NR <= 20 && $1 == "##" && $2 == version { found=1; exit } END { exit !found }' "$ADDON_DIR/CHANGELOG.md"; then
   pass "CHANGELOG.md has an entry for $version"
 else
   fail "CHANGELOG.md has no '## $version' entry near the top"
@@ -89,10 +89,23 @@ fi
 # 0.2.0: a floating tag plus auto_update let the Supervisor pull an untested
 # upstream WAHA unprompted.
 base=$(grep '^FROM ' "$ADDON_DIR/Dockerfile" | awk '{print $2}')
-if printf '%s' "$base" | grep -Eq '(@sha256:[0-9a-f]{64}|:[a-z-]*[0-9]{4}\.[0-9]+\.[0-9]+)$'; then
+if printf '%s' "$base" | grep -Eq '^devlikeapro/waha:noweb-arm-[0-9]{4}\.[0-9]+\.[0-9]+(@sha256:[0-9a-f]{64})?$'; then
   pass "base image is pinned: $base"
 else
-  fail "base image is not pinned to a version or digest: $base"
+  fail "base image must be a versioned noweb-arm WAHA image with an optional sha256 digest: $base"
+fi
+
+# A new base image is not offered to Supervisor unless the add-on version moves.
+if [ -n "${WAHA_PR_BASE_SHA:-}" ]; then
+  previous_image=$(git -C "$ADDON_DIR" show "$WAHA_PR_BASE_SHA:waha/Dockerfile" | awk '/^FROM / { print $2 }')
+  if [ "$base" != "$previous_image" ]; then
+    previous_version=$(git -C "$ADDON_DIR" show "$WAHA_PR_BASE_SHA:waha/config.yaml" | sed -n 's/^version: "\([^"]*\)"$/\1/p')
+    if python3 -c 'import sys; old, new = (tuple(map(int, v.split("."))) for v in sys.argv[1:]); sys.exit(not new > old)' "$previous_version" "$version"; then
+      pass "base image update bumps add-on version: $previous_version to $version"
+    else
+      fail "base image update must increase the add-on version above $previous_version"
+    fi
+  fi
 fi
 
 if grep -q 'COPY channel-test.html' "$ADDON_DIR/Dockerfile"; then

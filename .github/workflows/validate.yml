@@ -15,16 +15,15 @@ on:
       - "waha/**"
       - "custom_components/**"
       - "tests/**"
+      - ".github/scripts/**"
       - "hacs.json"
       - ".github/workflows/validate.yml"
   pull_request:
-    paths:
-      - "waha/**"
-      - "custom_components/**"
-      - "tests/**"
-      - "hacs.json"
-      - ".github/workflows/validate.yml"
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 # A superseded run tells you nothing useful once a newer commit is in flight.
 concurrency:
@@ -37,6 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Include the base parent of the PR merge commit.
 
       # Plain `nginx`, matching the Dockerfile — nginx-light ships without
       # ngx_http_sub_module, which is the module the routing tests exercise.
@@ -51,7 +52,12 @@ jobs:
       # the routing behaviour. Every assertion maps to a shipped regression;
       # see the comments in the script.
       - name: Validate add-on
+        env:
+          WAHA_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: ./waha/tests/validate.sh
+
+      - name: Test WAHA updater
+        run: python3 .github/scripts/test_update_waha.py
 
       # The Telegram-mirror payload template ships as a snippet users paste
       # into secrets.yaml, so nothing at runtime validates it. A malformed
