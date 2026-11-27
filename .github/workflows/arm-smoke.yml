@@ -1,0 +1,32 @@
+name: ARM add-on
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "waha/**"
+      - ".github/workflows/arm-smoke.yml"
+  pull_request:
+    paths:
+      - "waha/**"
+      - ".github/workflows/arm-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arm-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Build and boot ARM add-on
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build image and probe ingress
+        run: ./waha/tests/arm-smoke.sh

@@ -37,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Include the base parent of the PR merge commit.
 
       # Plain `nginx`, matching the Dockerfile — nginx-light ships without
       # ngx_http_sub_module, which is the module the routing tests exercise.
@@ -51,6 +53,8 @@ jobs:
       # the routing behaviour. Every assertion maps to a shipped regression;
       # see the comments in the script.
       - name: Validate add-on
+        env:
+          WAHA_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: ./waha/tests/validate.sh
 
       # The Telegram-mirror payload template ships as a snippet users paste

@@ -59,10 +59,9 @@ through Home Assistant: WAHA fetches it from Telegram directly.
 
 ## Development
 
-The Supervisor builds this add-on on the Home Assistant device itself, so a
-broken ingress config is only discovered at deploy time — and because `run.sh`
-runs under `set -e`, a failing `nginx -t` takes WhatsApp down with it. Validate
-before bumping `version:` in `waha/config.yaml`:
+The Supervisor builds this add-on on the Home Assistant device itself. A
+failing `nginx -t` in `run.sh` takes WhatsApp down. To check the configuration
+and ingress routes locally before updating the add-on:
 
 ```bash
 ./waha/tests/validate.sh
@@ -92,6 +91,10 @@ python3 ./tests/test_waha_api.py                # needs aiohttp
 CI additionally runs Home Assistant's `hassfest` and the HACS action against
 `custom_components/waha`.
 
+The **ARM add-on** workflow builds the Dockerfile on a native `linux/arm64`
+runner, boots it with throwaway data on an isolated network, and checks that
+`/api/server/version` reports GOWS through the real ingress proxy.
+
 ### Dependency updates
 
 Renovate proposes GitHub Actions updates and versioned WAHA `noweb-arm-YYYY.M.P`
@@ -101,7 +104,9 @@ tag pinned in [`waha/Dockerfile`](waha/Dockerfile), bump the add-on version in
 [`waha/CHANGELOG.md`](waha/CHANGELOG.md) entry. Review upstream GOWS release notes
 before merging.
 
-CI does not pull or build the `linux/arm64` image or log into WhatsApp. Keep
-Supervisor auto-update off if you want rollout to be a separate decision from
-merge. After a controlled HAOS update, verify that the existing GOWS session
-returns to `WORKING` without re-pairing and that a test channel post succeeds.
+CI rejects image updates without a higher add-on version and a matching
+changelog entry. The ARM smoke test does not run Supervisor, log into
+WhatsApp, or send a post. Keep Supervisor auto-update off if you want rollout
+to be a separate decision from merge. After a controlled HAOS update, verify
+that the existing GOWS session returns to `WORKING` without re-pairing and
+that a test channel post succeeds.
